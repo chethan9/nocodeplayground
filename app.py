@@ -66,47 +66,20 @@ def homepage():
     return "Homepage"
 #####################################################################################################
 
-
-def parse_key_pair_values(value, allow_empty):
-    """Parse values into different types based on their format."""
-    if not isinstance(value, str):  # Return non-string values as-is
-        return value
-
-    # Handle empty strings
-    if value.strip() == '':
-        return '' if allow_empty else None
-
-    # Convert to integer or float if possible
-    if value.isdigit():
+def parse_value(value, dtype, allow_empty):
+    if dtype == 'integer':
         return int(value)
-    try:
-        return float(value)
-    except ValueError:
-        pass
-
-    # Convert to boolean
-    if value.lower() in ['true', 'false']:
+    elif dtype == 'boolean':
         return value.lower() == 'true'
-
-    # Parse as list or dictionary
-    if '|' in value:
-        parts = value.split('|')
-        if ':' in value:
-            attributes = {}
-            for part in parts:
-                if ':' in part:
-                    key, val = part.split(':', 1)
-                    attributes[key.strip()] = val.strip()
-            return attributes
-        else:
-            return [part.strip() for part in parts]
-
-    # Default to return string
-    return value.strip()
+    elif dtype == 'array':
+        return [item.strip() for item in value.split('|')]
+    elif dtype == 'string':
+        return str(value)
+    else:
+        return value
 
 @app.route('/csvimport', methods=['POST'])
 def csv_import():
-    # Retrieve file and parameters from the request
     file = request.files.get('file')
     collection_name = request.args.get('collectionName')
     api_url = request.args.get('api_url')
@@ -115,35 +88,39 @@ def csv_import():
     allow_empty = request.args.get('allowempty', 'false').lower() == 'true'
     import_method = request.args.get('importMethod', 'addUpdate')
 
-    # Validate the inputs
     if not file or file.filename == '':
         return jsonify({"error": "No file part"}), 400
     if not collection_name or not api_url or not collection_setting:
         return jsonify({"error": "Missing collectionName, api_url, or collectionSetting parameters"}), 400
 
     try:
-        # Determine file type and read into a DataFrame
         if file.filename.endswith('.csv'):
-            df = pd.read_csv(file, keep_default_na=False)
+            df = pd.read_csv(file, header=[0, 1], keep_default_na=False)
         elif file.filename.endswith(('.xls', '.xlsx')):
-            df = pd.read_excel(file, keep_default_na=False)
+            df = pd.read_excel(file, header=[0, 1], keep_default_na=False)
         else:
             return jsonify({"error": "File format not supported"}), 400
 
-        # Convert DataFrame to JSON with custom parsing
+        if df.shape[0] < 2 or df.shape[1] != df.iloc[0].apply(str.lower).isin({'string', 'integer', 'boolean', 'array'}).all():
+            return jsonify({"error": "Invalid import template"}), 400
+        
+        dtype_row = df.iloc[0]
+        df = df[1:]
+        df.reset_index(drop=True, inplace=True)
+        df.columns = df.columns.get_level_values(0)
+        
         records = df.to_dict(orient='records')
         processed_records = []
         for record in records:
             processed_record = {}
             for key, value in record.items():
-                parsed_value = parse_key_pair_values(value, allow_empty)
-                if parsed_value is not None:
-                    processed_record[key] = parsed_value
+                dtype = dtype_row[key].lower()
+                if value or allow_empty:
+                    processed_record[key] = parse_value(value, dtype, allow_empty)
             processed_records.append(processed_record)
 
-        json_data = json.dumps(processed_records)  # Convert to JSON string
+        json_data = json.dumps(processed_records)
 
-        # If firebasepush is 'yes', make the API call
         if firebase_push == 'yes':
             params = {
                 "collectionName": collection_name,
@@ -151,11 +128,8 @@ def csv_import():
                 "importMethod": import_method
             }
             response = requests.post(api_url, params=params, json=json.loads(json_data), headers={'Content-Type': 'application/json'})
-
-            # Return the Cloud Function's response
             return jsonify(response.json()), response.status_code
         else:
-            # If firebasepush is 'no', return the JSON data
             return jsonify(json.loads(json_data))
 
     except Exception as e:
