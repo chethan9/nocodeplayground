@@ -67,9 +67,13 @@ def after_request(response):
 def homepage():
     return "Homepage"
 #####################################################################################################
-
+ 
 def parse_key_pair_values(value, data_type, allow_empty):
-    if value.strip() == '':
+    if isinstance(value, float) and pd.isna(value):
+        return None  # Handle NaN values for numeric columns
+
+    value = str(value).strip()
+    if value == '':
         return '' if allow_empty else None
 
     try:
@@ -85,11 +89,10 @@ def parse_key_pair_values(value, data_type, allow_empty):
             key, val = value.split(':', 1)
             return {key.strip(): val.strip()}
         elif data_type == 'arraykeyvalue':
-            # Process as an array of key-value pairs
-            key_value_pairs = [item.split(':', 1) for item in value.split('|')]
-            return [dict((k.strip(), v.strip()) for k, v in key_value_pairs)]
+            # Combine all key-value pairs into a single dictionary within an array
+            return [dict(item.split(':', 1) for item in value.split('|'))]
         else:
-            return value.strip()
+            return value
     except ValueError:
         return None  # or handle the error as you see fit
 
@@ -121,7 +124,7 @@ def csv_import():
             processed_record = {}
             for key, value in row.items():
                 data_type = data_types.get(key, 'string')  # Default to string
-                parsed_value = parse_key_pair_values(str(value), data_type, allow_empty)
+                parsed_value = parse_key_pair_values(value, data_type, allow_empty)
                 if parsed_value is not None:
                     processed_record[key] = parsed_value
             processed_records.append(processed_record)
