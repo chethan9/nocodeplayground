@@ -72,7 +72,7 @@ def parse_key_pair_values(value, data_type, allow_empty):
     if value.strip() == '':
         return '' if allow_empty else None
 
-   try:
+    try:
         if data_type == 'int':
             return int(value)
         elif data_type == 'float':
@@ -91,7 +91,7 @@ def parse_key_pair_values(value, data_type, allow_empty):
         else:
             return value.strip()
     except ValueError:
-        return None
+        return None  # or handle the error as you see fit
 
 @app.route('/csvimport', methods=['POST'])
 def csv_import():
