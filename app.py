@@ -72,7 +72,7 @@ def parse_key_pair_values(value, data_type, allow_empty):
     if value.strip() == '':
         return '' if allow_empty else None
 
-    try:
+   try:
         if data_type == 'int':
             return int(value)
         elif data_type == 'float':
@@ -85,11 +85,13 @@ def parse_key_pair_values(value, data_type, allow_empty):
             key, val = value.split(':', 1)
             return {key.strip(): val.strip()}
         elif data_type == 'arraykeyvalue':
-            return [dict([item.split(':', 1) for item in pair.split('|')]) for pair in value.split('|')]
+            # Process as an array of key-value pairs
+            key_value_pairs = [item.split(':', 1) for item in value.split('|')]
+            return [dict((k.strip(), v.strip()) for k, v in key_value_pairs)]
         else:
             return value.strip()
     except ValueError:
-        return None  # or handle the error as you see fit
+        return None
 
 @app.route('/csvimport', methods=['POST'])
 def csv_import():
