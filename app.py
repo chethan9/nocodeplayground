@@ -67,6 +67,8 @@ def after_request(response):
 def homepage():
     return "Homepage"
 #####################################################################################################
+
+
 def parse_key_pair_values(value, data_type, allow_empty):
     if value.strip() == '':
         return '' if allow_empty else None
@@ -99,16 +101,14 @@ def csv_import():
         return jsonify({"error": "No file part"}), 400
 
     try:
-        # Detect encoding
-        raw_data = file.read()
-        result = chardet.detect(raw_data)
-        encoding = result['encoding']
-        if encoding is None:
-            return jsonify({"error": "Unable to detect file encoding"}), 400
-        file.seek(0)  # Reset file pointer to the beginning
-
-        # Read CSV into DataFrame with detected encoding
-        df = pd.read_csv(file, encoding=encoding, keep_default_na=False)
+        filename = file.filename
+        # Determine file type and read into a DataFrame
+        if filename.endswith('.csv'):
+            df = pd.read_csv(file, keep_default_na=False)
+        elif filename.endswith(('.xls', '.xlsx')):
+            df = pd.read_excel(file, keep_default_na=False)
+        else:
+            return jsonify({"error": "File format not supported"}), 400
 
         # Extract data types from the second row
         data_types = df.iloc[0].to_dict()
@@ -120,7 +120,7 @@ def csv_import():
             processed_record = {}
             for key, value in row.items():
                 data_type = data_types.get(key, 'string')  # Default to string
-                parsed_value = parse_key_pair_values(value, data_type, allow_empty)
+                parsed_value = parse_key_pair_values(str(value), data_type, allow_empty)
                 if parsed_value is not None:
                     processed_record[key] = parsed_value
             processed_records.append(processed_record)
