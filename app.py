@@ -68,7 +68,6 @@ def homepage():
     return "Homepage"
 #####################################################################################################
 
-
 def parse_key_pair_values(value, data_type, allow_empty):
     if value.strip() == '':
         return '' if allow_empty else None
