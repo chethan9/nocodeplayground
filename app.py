@@ -95,15 +95,15 @@ def csv_import():
 
     try:
         if file.filename.endswith('.csv'):
-            df = pd.read_csv(file, header=[0, 1], keep_default_na=False)
+            df = pd.read_csv(file, header=[0, 1], keep_default_na=False, dtype=str)
         elif file.filename.endswith(('.xls', '.xlsx')):
-            df = pd.read_excel(file, header=[0, 1], keep_default_na=False)
+            df = pd.read_excel(file, header=[0, 1], keep_default_na=False, dtype=str)
         else:
             return jsonify({"error": "File format not supported"}), 400
 
-        if df.shape[0] < 2 or df.shape[1] != df.iloc[0].apply(str.lower).isin({'string', 'integer', 'boolean', 'array'}).all():
+        if df.shape[0] < 2 or not all(item in {'string', 'integer', 'boolean', 'array'} for item in df.iloc[0]):
             return jsonify({"error": "Invalid import template"}), 400
-        
+
         dtype_row = df.iloc[0]
         df = df[1:]
         df.reset_index(drop=True, inplace=True)
