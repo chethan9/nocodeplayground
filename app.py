@@ -24,6 +24,8 @@ from twilio.rest import Client
 import json
 import pandas as pd
 import openpyxl
+import chardet
+
 
 
 app = Flask(__name__)
@@ -65,7 +67,6 @@ def after_request(response):
 def homepage():
     return "Homepage"
 #####################################################################################################
-
 def parse_key_pair_values(value, data_type, allow_empty):
     if value.strip() == '':
         return '' if allow_empty else None
@@ -98,8 +99,16 @@ def csv_import():
         return jsonify({"error": "No file part"}), 400
 
     try:
-        # Read CSV into DataFrame
-        df = pd.read_csv(file, keep_default_na=False)
+        # Detect encoding
+        raw_data = file.read()
+        result = chardet.detect(raw_data)
+        encoding = result['encoding']
+        if encoding is None:
+            return jsonify({"error": "Unable to detect file encoding"}), 400
+        file.seek(0)  # Reset file pointer to the beginning
+
+        # Read CSV into DataFrame with detected encoding
+        df = pd.read_csv(file, encoding=encoding, keep_default_na=False)
 
         # Extract data types from the second row
         data_types = df.iloc[0].to_dict()
