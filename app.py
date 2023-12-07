@@ -90,9 +90,9 @@ def parse_key_pair_values(value, data_type, allow_empty):
             key, val = value.split(':', 1)
             return {key.strip(): val.strip()}
         elif data_type == 'arraykeyvalue':
+            # Directly return a dictionary instead of a list of dictionaries
             key_value_pairs = value.split('|')
-            combined_dict = {pair.split(':', 1)[0].strip(): pair.split(':', 1)[1].strip() for pair in key_value_pairs}
-            return [combined_dict] if combined_dict else []
+            return {pair.split(':', 1)[0].strip(): pair.split(':', 1)[1].strip() for pair in key_value_pairs}
         else:
             return value
     except ValueError:
