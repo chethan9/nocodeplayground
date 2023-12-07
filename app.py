@@ -68,6 +68,7 @@ def homepage():
     return "Homepage"
 #####################################################################################################
  
+
 def parse_key_pair_values(value, data_type, allow_empty):
     if isinstance(value, float) and pd.isna(value):
         return None  # Handle NaN values for numeric columns
@@ -89,8 +90,9 @@ def parse_key_pair_values(value, data_type, allow_empty):
             key, val = value.split(':', 1)
             return {key.strip(): val.strip()}
         elif data_type == 'arraykeyvalue':
-            # Combine all key-value pairs into a single dictionary within an array
-            return [dict(item.split(':', 1) for item in value.split('|'))]
+            key_value_pairs = value.split('|')
+            combined_dict = {pair.split(':', 1)[0].strip(): pair.split(':', 1)[1].strip() for pair in key_value_pairs}
+            return [combined_dict] if combined_dict else []
         else:
             return value
     except ValueError:
