@@ -140,8 +140,8 @@ if __name__ == '__main__':
     app.run(debug=True)
 #######################################################################################################################################
 
-@app.route('/knet', methods=['GET'])
-def knet():
+@app.route('/capture-redirect', methods=['GET'])
+def capture_redirect():
     original_url = request.args.get('url')
     custom_host = request.args.get('host')
     
@@ -149,7 +149,7 @@ def knet():
         return jsonify({"error": "Missing URL or host parameter"}), 400
 
     try:
-        # Make a request to the original URL with s turned off
+        # Make a request to the original URL with redirects turned off
         response = requests.get(original_url, allow_redirects=False)
 
         # Check if there is a redirect (status code 301 or 302)
