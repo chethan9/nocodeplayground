@@ -2,6 +2,8 @@ from flask import Flask, request, jsonify
 import os
 import pandas as pd
 import openpyxl
+import requests
+
 
 app = Flask(__name__)
 
@@ -92,3 +94,24 @@ def csv_import():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
+@app.route('/get_redirected_url', methods=['GET'])
+def get_redirected_url():
+    original_url = request.args.get('url')
+    host = request.args.get('host')
+
+    if not original_url or not host:
+        return jsonify({"error": "Missing url or host parameter"}), 400
+
+    try:
+        # Make a request to the original URL
+        response = requests.get(original_url, allow_redirects=True)
+        redirected_url = response.url
+
+        # Construct the new URL
+        final_url = f'{host}?url={redirected_url}'
+
+        return jsonify({"final_url": final_url})
+
+    except requests.RequestException as e:
+        return jsonify({"error": str(e)}), 500
