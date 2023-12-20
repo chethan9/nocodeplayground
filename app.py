@@ -1,42 +1,9 @@
-from datetime import datetime, timedelta
-from flask import Flask, request, jsonify, session
-from instagrapi import Client
-from jsmin import jsmin
-from urllib.parse import urlparse, parse_qs, urlencode, urlunparse, quote
-from werkzeug.utils import secure_filename
-from bs4 import BeautifulSoup
-from css_html_js_minify import process_single_css_file as minify_css
-from cssutils import parseString
-import cssutils
-import jwt
-import logging
+from flask import Flask, request, jsonify
 import os
-import PTN
-import random
-import requests
-import string
-import time
-import uuid
-from htmlmin import minify as htmlmin
-import re
-from flask import make_response
-from twilio.rest import Client
-import json
 import pandas as pd
 import openpyxl
-import chardet
-
-
 
 app = Flask(__name__)
-
-# Get the current directory
-current_directory = os.getcwd()
-
-# Set the log file path in the root directory
-log_file_path = os.path.join(current_directory, 'api.log')
-# Configure logging
-logging.basicConfig(filename=log_file_path, level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def create_app():
     app = Flask(__name__, static_folder='uploads', static_url_path='/uploads')
@@ -46,28 +13,19 @@ def create_app():
         os.makedirs(upload_folder)
     return app
 
-
 app = create_app()
-
-@app.before_request
-def before_request():
-    # This code will be executed before each request
-    app.logger.info('Request: %s %s', request.method, request.url)
-    app.logger.info('Headers: %s', request.headers)
-    app.logger.info('Body: %s', request.get_data())
-
-
-@app.after_request
-def after_request(response):
-    # This code will be executed after each request
-    app.logger.info('Response: %s', response.status)
-    return response
 
 @app.route('/', methods=['GET'])
 def homepage():
     return "Homepage"
-#####################################################################################################
- 
+
+@app.before_request
+def before_request():
+    pass  # Placeholder for future before request actions
+
+@app.after_request
+def after_request(response):
+    return response
 
 def parse_key_pair_values(value, data_type, allow_empty):
     if isinstance(value, float) and pd.isna(value):
@@ -90,13 +48,12 @@ def parse_key_pair_values(value, data_type, allow_empty):
             key, val = value.split(':', 1)
             return {key.strip(): val.strip()}
         elif data_type == 'arraykeyvalue':
-            # Directly return a dictionary instead of a list of dictionaries
             key_value_pairs = value.split('|')
             return {pair.split(':', 1)[0].strip(): pair.split(':', 1)[1].strip() for pair in key_value_pairs}
         else:
             return value
     except ValueError:
-        return None  # or handle the error as you see fit
+        return None
 
 @app.route('/csvimport', methods=['POST'])
 def csv_import():
@@ -108,7 +65,6 @@ def csv_import():
 
     try:
         filename = file.filename
-        # Determine file type and read into a DataFrame
         if filename.endswith('.csv'):
             df = pd.read_csv(file, keep_default_na=False)
         elif filename.endswith(('.xls', '.xlsx')):
@@ -116,16 +72,14 @@ def csv_import():
         else:
             return jsonify({"error": "File format not supported"}), 400
 
-        # Extract data types from the second row
         data_types = df.iloc[0].to_dict()
-        df = df[1:]  # Remove the data type row
+        df = df[1:]
 
-        # Process each record
         processed_records = []
         for _, row in df.iterrows():
             processed_record = {}
             for key, value in row.items():
-                data_type = data_types.get(key, 'string')  # Default to string
+                data_type = data_types.get(key, 'string')
                 parsed_value = parse_key_pair_values(value, data_type, allow_empty)
                 if parsed_value is not None:
                     processed_record[key] = parsed_value
@@ -138,38 +92,3 @@ def csv_import():
 
 if __name__ == '__main__':
     app.run(debug=True)
-#######################################################################################################################################
-
-@app.route('/capture-redirect', methods=['GET'])
-def capture_redirect():
-    original_url = request.args.get('url')
-    custom_host = request.args.get('host')
-    
-    if not original_url or not custom_host:
-        return jsonify({"error": "Missing URL or host parameter"}), 400
-
-    try:
-        # Make a request to the original URL with redirects turned off
-        response = requests.get(original_url, allow_redirects=False)
-
-        # Check if there is a redirect (status code 301 or 302)
-        if response.status_code in [301, 302]:
-            location_header = response.headers.get('Location')
-
-            if location_header:
-                # Quote the redirect URL to safely include it in the path
-                quoted_redirect_url = quote(location_header, safe='')
-
-                # Construct the new URL with the custom host
-                new_url = f"{custom_host}/{quoted_redirect_url}"
-
-                return jsonify({"redirect_url": new_url})
-        else:
-            # Handle the case where no redirect occurs
-            return jsonify({"message": "No redirect occurred"}), 200
-
-    except requests.RequestException as e:
-        return jsonify({"error": str(e)}), 500
-
-if __name__ == '__main__':
-    app.run()
