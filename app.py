@@ -138,3 +138,38 @@ def csv_import():
 
 if __name__ == '__main__':
     app.run(debug=True)
+#######################################################################################################################################
+
+@app.route('/knet', methods=['GET'])
+def knet():
+    original_url = request.args.get('url')
+    custom_host = request.args.get('host')
+    
+    if not original_url or not custom_host:
+        return jsonify({"error": "Missing URL or host parameter"}), 400
+
+    try:
+        # Make a request to the original URL with s turned off
+        response = requests.get(original_url, allow_redirects=False)
+
+        # Check if there is a redirect (status code 301 or 302)
+        if response.status_code in [301, 302]:
+            location_header = response.headers.get('Location')
+
+            if location_header:
+                # Quote the redirect URL to safely include it in the path
+                quoted_redirect_url = quote(location_header, safe='')
+
+                # Construct the new URL with the custom host
+                new_url = f"{custom_host}/{quoted_redirect_url}"
+
+                return jsonify({"redirect_url": new_url})
+        else:
+            # Handle the case where no redirect occurs
+            return jsonify({"message": "No redirect occurred"}), 200
+
+    except requests.RequestException as e:
+        return jsonify({"error": str(e)}), 500
+
+if __name__ == '__main__':
+    app.run()
