@@ -108,10 +108,13 @@ def get_redirected_url():
         response = requests.get(original_url, allow_redirects=True)
         redirected_url = response.url
 
-        # Construct the new URL
-        final_url = f'{host}?url={redirected_url}'
+        # Construct the new URL without '?url='
+        final_url = f'{host}{redirected_url}'
 
         return jsonify({"final_url": final_url})
 
     except requests.RequestException as e:
         return jsonify({"error": str(e)}), 500
+
+if __name__ == '__main__':
+    app.run(debug=True)
