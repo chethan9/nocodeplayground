@@ -3,7 +3,7 @@ import os
 import pandas as pd
 import openpyxl
 import requests
-
+import base64
 
 app = Flask(__name__)
 
@@ -113,6 +113,47 @@ def get_redirected_url():
 
         return jsonify({"final_url": final_url})
 
+    except requests.RequestException as e:
+        return jsonify({"error": str(e)}), 500
+
+if __name__ == '__main__':
+    app.run(debug=True)
+#########################################################################################################################
+
+# Predefined credentials
+credentials = {
+    'vizsoft': {'client_id': 'S2K8AXVQ7OJvLB59Giirg', 'client_secret': 'TTbyJqB50X85sFgC9n3QzDgicN3hlj0l', 'account_id': 'S2K8AXVQ7OJvLB59Giirg'},
+    # Add other clients as needed
+}
+
+@app.route('/get_zoom_token', methods=['GET'])
+def get_zoom_token():
+    client_name = request.args.get('client_name')
+    
+    if client_name not in credentials:
+        return jsonify({"error": "Invalid client name"}), 400
+
+    client_id = credentials[client_name]['client_id']
+    client_secret = credentials[client_name]['client_secret']
+    account_id = credentials[client_name]['account_id']
+
+    # Encode the client credentials
+    encoded_credentials = base64.b64encode(f"{client_id}:{client_secret}".encode()).decode()
+
+    headers = {
+        "Authorization": f"Basic {encoded_credentials}",
+        "Content-Type": "application/x-www-form-urlencoded"
+    }
+
+    body = {
+        "grant_type": "account_credentials",
+        "account_id": account_id
+    }
+
+    try:
+        response = requests.post('https://zoom.us/oauth/token', headers=headers, data=body)
+        response.raise_for_status()
+        return jsonify(response.json())
     except requests.RequestException as e:
         return jsonify({"error": str(e)}), 500
 
