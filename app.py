@@ -175,14 +175,17 @@ def create_zoom_meeting():
 
     # Required fields
     topic = data.get('topic')
-    start_time = data.get('start_time')  # Assuming already in correct format
+    input_start_time = data.get('start_time')  # e.g., "2023-12-21 22:00:00.000"
     duration = data.get('duration')
     agenda = data.get('agenda')
 
-    if not all([topic, start_time, duration, agenda]):
+    if not all([topic, input_start_time, duration, agenda]):
         return jsonify({"error": "Missing required parameters"}), 400
 
     client_details = credentials[client_name]
+
+    # Format the input time for Zoom
+    start_time = format_start_time_for_zoom(input_start_time)
 
     # Generate OAuth token
     oauth_token = get_oauth_token(client_details)
@@ -212,6 +215,10 @@ def create_zoom_meeting():
         return jsonify(response.json())
     except requests.RequestException as e:
         return jsonify({"error": str(e)}), 500
+
+def format_start_time_for_zoom(input_time):
+    # Format: 'YYYY-MM-DD HH:MM:SS.mmm' to 'YYYY-MM-DDTHH:MM:SS'
+    return input_time.split('.')[0].replace(' ', 'T')
 
 def get_oauth_token(client_details):
     client_id = client_details['client_id']
