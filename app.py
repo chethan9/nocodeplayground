@@ -122,10 +122,9 @@ def get_redirected_url():
 if __name__ == '__main__':
     app.run(debug=True)
 #########################################################################################################################
-
 # Predefined credentials
 credentials = {
-    'client_name_1': {
+    'vizsoft': {
         'client_id': 'S2K8AXVQ7OJvLB59Giirg', 
         'client_secret': 'TTbyJqB50X85sFgC9n3QzDgicN3hlj0l', 
         'account_id': 'GawvZa-MTg2lj5xA2EW9yg',
@@ -166,9 +165,6 @@ def get_zoom_token():
     except requests.RequestException as e:
         return jsonify({"error": str(e)}), 500
 
-if __name__ == '__main__':
-    app.run(debug=True)
-
 @app.route('/create_zoom_meeting', methods=['POST'])
 def create_zoom_meeting():
     data = request.json
@@ -179,18 +175,14 @@ def create_zoom_meeting():
 
     # Required fields
     topic = data.get('topic')
-    input_start_time = data.get('start_time')  # e.g., "13 October 2023 at 14:07:37 UTC+3"
+    start_time = data.get('start_time')  # Assuming already in correct format
     duration = data.get('duration')
     agenda = data.get('agenda')
 
-    if not all([topic, input_start_time, duration, agenda]):
+    if not all([topic, start_time, duration, agenda]):
         return jsonify({"error": "Missing required parameters"}), 400
 
     client_details = credentials[client_name]
-    timezone = client_details.get('timezone', 'UTC')
-
-    # Parse the input time and adjust to UTC
-    start_time = parse_input_time(input_start_time)
 
     # Generate OAuth token
     oauth_token = get_oauth_token(client_details)
@@ -210,7 +202,7 @@ def create_zoom_meeting():
         "type": 2,  # Scheduled meeting
         "start_time": start_time,
         "duration": duration,
-        "timezone": timezone,
+        "timezone": client_details['timezone'],
         "agenda": agenda
     }
 
@@ -221,13 +213,30 @@ def create_zoom_meeting():
     except requests.RequestException as e:
         return jsonify({"error": str(e)}), 500
 
-def parse_input_time(input_time):
-    # Remove any prefix before the date
-    date_str = re.sub(r'^.*?\d{1,2} ', '', input_time)
+def get_oauth_token(client_details):
+    client_id = client_details['client_id']
+    client_secret = client_details['client_secret']
+    account_id = client_details['account_id']
 
-    # Parse the date and time
-    dt = datetime.strptime(date_str, '%B %Y at %H:%M:%S UTC%z')
-    
-    # Convert to UTC and format for Zoom
-    utc_dt = dt.astimezone(pytz.utc)
-    return utc_dt.strftime('%Y-%m-%dT%H:%M:%SZ')
+    # Encode the client credentials
+    encoded_credentials = base64.b64encode(f"{client_id}:{client_secret}".encode()).decode()
+
+    headers = {
+        "Authorization": f"Basic {encoded_credentials}",
+        "Content-Type": "application/x-www-form-urlencoded"
+    }
+
+    body = {
+        "grant_type": "account_credentials",
+        "account_id": account_id
+    }
+
+    try:
+        response = requests.post('https://zoom.us/oauth/token', headers=headers, data=body)
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException as e:
+        return {"error": str(e)}
+
+if __name__ == '__main__':
+    app.run(debug=True)
