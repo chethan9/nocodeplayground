@@ -4,6 +4,9 @@ import pandas as pd
 import openpyxl
 import requests
 import base64
+import pytz
+from datetime import datetime
+
 
 app = Flask(__name__)
 
@@ -122,7 +125,13 @@ if __name__ == '__main__':
 
 # Predefined credentials
 credentials = {
-    'vizsoft': {'client_id': 'S2K8AXVQ7OJvLB59Giirg', 'client_secret': 'TTbyJqB50X85sFgC9n3QzDgicN3hlj0l', 'account_id': 'GawvZa-MTg2lj5xA2EW9yg'},
+    'client_name_1': {
+        'client_id': 'S2K8AXVQ7OJvLB59Giirg', 
+        'client_secret': 'TTbyJqB50X85sFgC9n3QzDgicN3hlj0l', 
+        'account_id': 'GawvZa-MTg2lj5xA2EW9yg',
+        'client_username': 'it@vizsoft.in',
+        'timezone': 'Asia/Kuwait'
+    },
     # Add other clients as needed
 }
 
@@ -159,3 +168,66 @@ def get_zoom_token():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
+@app.route('/create_zoom_meeting', methods=['POST'])
+def create_zoom_meeting():
+    data = request.json
+    client_name = data.get('client_name')
+
+    if client_name not in credentials:
+        return jsonify({"error": "Invalid client name"}), 400
+
+    # Required fields
+    topic = data.get('topic')
+    input_start_time = data.get('start_time')  # e.g., "13 October 2023 at 14:07:37 UTC+3"
+    duration = data.get('duration')
+    agenda = data.get('agenda')
+
+    if not all([topic, input_start_time, duration, agenda]):
+        return jsonify({"error": "Missing required parameters"}), 400
+
+    client_details = credentials[client_name]
+    timezone = client_details.get('timezone', 'UTC')
+
+    # Parse the input time and adjust to UTC
+    start_time = parse_input_time(input_start_time)
+
+    # Generate OAuth token
+    oauth_token = get_oauth_token(client_details)
+    if 'error' in oauth_token:
+        return oauth_token
+
+    # Zoom create meeting endpoint
+    zoom_create_meeting_url = f'https://api.zoom.us/v2/users/{client_details["client_username"]}/meetings'
+
+    headers = {
+        "Authorization": f"Bearer {oauth_token['access_token']}",
+        "Content-Type": "application/json"
+    }
+
+    meeting_data = {
+        "topic": topic,
+        "type": 2,  # Scheduled meeting
+        "start_time": start_time,
+        "duration": duration,
+        "timezone": timezone,
+        "agenda": agenda
+    }
+
+    try:
+        response = requests.post(zoom_create_meeting_url, headers=headers, json=meeting_data)
+        response.raise_for_status()
+        return jsonify(response.json())
+    except requests.RequestException as e:
+        return jsonify({"error": str(e)}), 500
+
+def parse_input_time(input_time):
+    # Remove any prefix before the date
+    date_str = re.sub(r'^.*?\d{1,2} ', '', input_time)
+
+    # Parse the date and time
+    dt = datetime.strptime(date_str, '%B %Y at %H:%M:%S UTC%z')
+    
+    # Convert to UTC and format for Zoom
+    utc_dt = dt.astimezone(pytz.utc)
+    return utc_dt.strftime('%Y-%m-%dT%H:%M:%SZ')
