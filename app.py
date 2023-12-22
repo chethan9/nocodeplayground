@@ -124,14 +124,20 @@ if __name__ == '__main__':
 #########################################################################################################################
 # Predefined credentials
 credentials = {
-    'vizsoft': {
+    'bonus': {
+        'client_id': 'EzUvevnZSHaqckAel0XQLw', 
+        'client_secret': 'iD92OPk0Vq9DYtk45nqarHtfKIy7HR7d', 
+        'account_id': 'GawvZa-MTg2lj5xA2EW9yg',
+        'client_username': 'it@vizsoft.in',
+        'timezone': 'Asia/Kuwait'
+    },
+    'drip': {
         'client_id': 'S2K8AXVQ7OJvLB59Giirg', 
         'client_secret': 'TTbyJqB50X85sFgC9n3QzDgicN3hlj0l', 
         'account_id': 'GawvZa-MTg2lj5xA2EW9yg',
         'client_username': 'it@vizsoft.in',
         'timezone': 'Asia/Kuwait'
     },
-    # Add other clients as needed
 }
 
 @app.route('/get_zoom_token', methods=['GET'])
