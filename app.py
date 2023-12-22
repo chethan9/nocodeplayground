@@ -245,5 +245,40 @@ def get_oauth_token(client_details):
     except requests.RequestException as e:
         return {"error": str(e)}
 
+@app.route('/update_zoom_meeting', methods=['PATCH'])
+def update_zoom_meeting():
+    client_name = request.headers.get('client_name')
+    meeting_id = request.headers.get('meeting_id')
+    data = request.json
+
+    if not client_name or not meeting_id:
+        return jsonify({"error": "Missing client name or meeting ID"}), 400
+
+    if client_name not in credentials:
+        return jsonify({"error": "Invalid client name"}), 400
+
+    client_details = credentials[client_name]
+
+    # Generate OAuth token
+    oauth_token = get_oauth_token(client_details)
+    if 'error' in oauth_token:
+        return oauth_token
+
+    # Zoom update meeting endpoint
+    zoom_update_meeting_url = f'https://api.zoom.us/v2/meetings/{meeting_id}'
+
+    headers = {
+        "Authorization": f"Bearer {oauth_token['access_token']}",
+        "Content-Type": "application/json"
+    }
+
+    try:
+        response = requests.patch(zoom_update_meeting_url, headers=headers, json=data)
+        response.raise_for_status()
+        return jsonify(response.json())
+    except requests.RequestException as e:
+        return jsonify({"error": str(e)}), 500
+
+
 if __name__ == '__main__':
     app.run(debug=True)
