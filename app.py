@@ -274,10 +274,21 @@ def update_zoom_meeting():
 
     try:
         response = requests.patch(zoom_update_meeting_url, headers=headers, json=data)
-        response.raise_for_status()
+        response.raise_for_status()  # Raises an error for HTTP error responses
+
+        # If the response is successful but contains no content
+        if response.status_code == 204:
+            return jsonify({"message": "Meeting data updated successfully"})
+
+        # If the response contains content, return it
         return jsonify(response.json())
     except requests.RequestException as e:
-        return jsonify({"error": str(e)}), 500
+        # Log the response text for debugging
+        error_message = f"RequestException: {str(e)}, Response: {e.response.text if e.response else 'No response'}"
+        return jsonify({"error": error_message}), 500
+    except ValueError as e:
+        # JSON parsing error
+        return jsonify({"error": f"JSON parsing error: {str(e)}"}), 500
 
 
 if __name__ == '__main__':
