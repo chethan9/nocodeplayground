@@ -290,6 +290,69 @@ def update_zoom_meeting():
         # JSON parsing error
         return jsonify({"error": f"JSON parsing error: {str(e)}"}), 500
 
+@app.route('/get_zoom_meeting', methods=['GET'])
+def get_zoom_meeting():
+    client_name = request.args.get('client_name')
+    meeting_id = request.args.get('meeting_id')
+
+    if not client_name or not meeting_id:
+        return jsonify({"error": "Missing client name or meeting ID"}), 400
+
+    if client_name not in credentials:
+        return jsonify({"error": "Invalid client name"}), 400
+
+    client_details = credentials[client_name]
+
+    # Generate OAuth token
+    oauth_token = get_oauth_token(client_details)
+    if 'error' in oauth_token:
+        return oauth_token
+
+    # Zoom get meeting details endpoint
+    zoom_meeting_details_url = f'https://api.zoom.us/v2/meetings/{meeting_id}'
+
+    headers = {
+        "Authorization": f"Bearer {oauth_token['access_token']}"
+    }
+
+    try:
+        response = requests.get(zoom_meeting_details_url, headers=headers)
+        response.raise_for_status()
+        return jsonify(response.json())
+    except requests.RequestException as e:
+        return jsonify({"error": str(e)}), 500
+        
+@app.route('/delete_zoom_meeting', methods=['DELETE'])
+def delete_zoom_meeting():
+    client_name = request.args.get('client_name')
+    meeting_id = request.args.get('meeting_id')
+
+    if not client_name or not meeting_id:
+        return jsonify({"error": "Missing client name or meeting ID"}), 400
+
+    if client_name not in credentials:
+        return jsonify({"error": "Invalid client name"}), 400
+
+    client_details = credentials[client_name]
+
+    # Generate OAuth token
+    oauth_token = get_oauth_token(client_details)
+    if 'error' in oauth_token:
+        return oauth_token
+
+    # Zoom delete meeting endpoint
+    zoom_delete_meeting_url = f'https://api.zoom.us/v2/meetings/{meeting_id}'
+
+    headers = {
+        "Authorization": f"Bearer {oauth_token['access_token']}"
+    }
+
+    try:
+        response = requests.delete(zoom_delete_meeting_url, headers=headers)
+        response.raise_for_status()
+        return jsonify({"message": "Meeting deleted successfully"})
+    except requests.RequestException as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
