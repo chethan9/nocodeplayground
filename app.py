@@ -373,3 +373,18 @@ def search():
         return "No query provided", 400
     results = ytmusic.search(query)
     return jsonify(results)
+    
+    
+@app.route('/get_streams', methods=['GET'])
+def get_streams():
+    video_id = request.args.get('video_id')
+    if not video_id:
+        return jsonify({'error': 'No video ID provided'}), 400
+
+    try:
+        yt = YouTube(f'https://www.youtube.com/watch?v={video_id}')
+        streams = yt.streams.filter(progressive=True).all()
+        stream_data = [{'itag': s.itag, 'mime_type': s.mime_type, 'resolution': s.resolution, 'fps': s.fps} for s in streams]
+        return jsonify(stream_data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
