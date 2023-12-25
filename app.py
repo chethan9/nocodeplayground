@@ -6,6 +6,7 @@ import requests
 import base64
 import pytz
 from datetime import datetime
+from ytmusicapi import YTMusic
 
 
 app = Flask(__name__)
@@ -362,3 +363,12 @@ def delete_zoom_meeting():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
+#############################################################################################################
+@app.route('/search', methods=['GET'])
+def search():
+    query = request.args.get('query')
+    if not query:
+        return "No query provided", 400
+    results = ytmusic.search(query)
+    return jsonify(results)
