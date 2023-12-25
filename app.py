@@ -399,8 +399,12 @@ def get_download_links():
 
     try:
         yt = YouTube(f'https://www.youtube.com/watch?v={video_id}')
-        streams = yt.streams.filter(progressive=True).all()
-        download_links = [{'itag': s.itag, 'mime_type': s.mime_type, 'resolution': s.resolution, 'fps': s.fps, 'download_url': s.url} for s in streams]
-        return jsonify(download_links)
+        video_streams = yt.streams.filter(progressive=True, file_extension='mp4').all()
+        audio_streams = yt.streams.filter(only_audio=True, file_extension='mp4').all()
+
+        video_links = [{'itag': s.itag, 'type': 'video', 'mime_type': s.mime_type, 'resolution': s.resolution, 'download_url': s.url} for s in video_streams]
+        audio_links = [{'itag': s.itag, 'type': 'audio', 'mime_type': s.mime_type, 'bitrate': s.abr, 'download_url': s.url} for s in audio_streams]
+
+        return jsonify({'video': video_links, 'audio': audio_links})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
