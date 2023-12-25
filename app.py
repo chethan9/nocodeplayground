@@ -389,3 +389,18 @@ def get_streams():
         return jsonify(stream_data)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+@app.route('/get_download_links', methods=['GET'])
+def get_download_links():
+    video_id = request.args.get('video_id')
+    if not video_id:
+        return jsonify({'error': 'No video ID provided'}), 400
+
+    try:
+        yt = YouTube(f'https://www.youtube.com/watch?v={video_id}')
+        streams = yt.streams.filter(progressive=True).all()
+        download_links = [{'itag': s.itag, 'mime_type': s.mime_type, 'resolution': s.resolution, 'fps': s.fps, 'download_url': s.url} for s in streams]
+        return jsonify(download_links)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
