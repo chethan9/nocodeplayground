@@ -10,6 +10,7 @@ from ytmusicapi import YTMusic
 
 
 app = Flask(__name__)
+ytmusic = YTMusic()
 
 def create_app():
     app = Flask(__name__, static_folder='uploads', static_url_path='/uploads')
