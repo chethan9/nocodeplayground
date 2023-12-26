@@ -370,10 +370,17 @@ if __name__ == '__main__':
 @app.route('/search', methods=['GET'])
 def search():
     query = request.args.get('query')
+    category = request.args.get('category')  # New query parameter for category
+
     if not query:
         return "No query provided", 400
+
     results = ytmusic.search(query)
+    if category:
+        filtered_results = [result for result in results if result.get('category') == category]
+        return jsonify(filtered_results)
     return jsonify(results)
+
     
     
 @app.route('/get_streams', methods=['GET'])
