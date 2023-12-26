@@ -419,13 +419,10 @@ def get_download_links():
 @app.route('/autocomplete', methods=['GET'])
 def autocomplete():
     query = request.args.get('q')
-    client = request.args.get('client', 'youtube')  # Default to 'youtube'
-    ds = request.args.get('ds', 'yt')  # Default to 'yt'
-
     if not query:
         return jsonify({'error': 'No query provided'}), 400
 
-    url = f'https://suggestqueries.google.com/complete/search?client={client}&ds={ds}&q={query}'
+    url = f'https://suggestqueries.google.com/complete/search?client=youtube&ds=yt&q={query}'
     response = requests.get(url)
     if response.status_code != 200:
         return jsonify({'error': 'Failed to fetch suggestions'}), 500
