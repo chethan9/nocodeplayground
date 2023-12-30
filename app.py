@@ -440,25 +440,4 @@ def autocomplete():
         return jsonify(terms)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-#############################################################################################################################################
 
-@app.route('/kanbanflow', methods=['GET'])
-def kanbanflow_proxy():
-    # Get the token from query parameter
-    api_token = request.args.get('apiToken')
-
-    if not api_token:
-        return jsonify({"error": "apiToken is required"}), 400
-
-    # Encode the token
-    base64_credentials = base64.b64encode(f"apiToken:{api_token}".encode()).decode()
-
-    # Make a request to the Kanban Flow API
-    url = "https://kanbanflow.com/api/v1/board"
-    headers = {"Authorization": f"Basic {base64_credentials}"}
-    response = requests.get(url, headers=headers)
-
-    return jsonify(response.json())
-
-if __name__ == '__main__':
-    app.run(debug=True)
