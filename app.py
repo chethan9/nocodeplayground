@@ -436,17 +436,17 @@ def autocomplete():
 
 
 ############################################################################################################################
-
 @app.route('/process_image', methods=['POST'])
 def process_image():
-    # Get image and instruction from the request
+    # Get image, instruction, and OpenAI API key from the request
     image = request.files['image']
     instruction = request.form['instruction']
+    openai_api_key = request.form['openai_api_key']
 
     # Step 1: Call Luxand Cloud API for face landmark detection
     luxand_response = requests.post(
         'https://api.luxand.cloud/photo/landmarks',
-        headers={'token': '5acc11ec40f9441284ce5f90c0467087 '},
+        headers={'token': '5acc11ec40f9441284ce5f90c0467087'},
         files={'photo': image}
     )
     face_landmarks = luxand_response.json()
@@ -456,7 +456,7 @@ def process_image():
         'https://api.openai.com/v1/chat/completions',
         headers={
             'Content-Type': 'application/json',
-            'Authorization': 'Bearer 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'
+            'Authorization': f'Bearer {openai_api_key}'
         },
         json={
             'model': 'gpt-3.5-turbo',
