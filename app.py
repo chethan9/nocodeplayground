@@ -437,6 +437,7 @@ def autocomplete():
 
 ############################################################################################################################
 
+
 @app.route('/process_image', methods=['POST'])
 def process_image():
     request_type = request.form['type']
@@ -444,12 +445,19 @@ def process_image():
     openai_api_key = request.form['openai_api_key']
     system_content = request.form.get('system_content', 'You are an AI capable of processing data')
 
-    if human_check:
+    image = None
+    if 'image' in request.files:
         image = request.files['image']
+
+    if human_check:
+        if image is None:
+            return jsonify({'error': 'Image is required for human check'}), 400
         if not is_human(image):
             return jsonify({'error': 'No human detected in the image'}), 400
 
     if request_type == 'landmark':
+        if image is None:
+            return jsonify({'error': 'Image is required for landmark detection'}), 400
         return perform_landmark_detection(image)
 
     elif request_type == 'openapi':
@@ -457,7 +465,8 @@ def process_image():
         return call_openai_api(system_content, user_content, openai_api_key)
 
     elif request_type == 'faceapi':
-        image = request.files['image']
+        if image is None:
+            return jsonify({'error': 'Image is required for faceapi processing'}), 400
         landmark_result = perform_landmark_detection(image)
         serialized_data = json.dumps(landmark_result)
         return call_openai_api(system_content, serialized_data, openai_api_key)
@@ -468,7 +477,7 @@ def process_image():
 def is_human(image):
     luxand_response = requests.post(
         'https://api.luxand.cloud/photo/detect',
-        headers={'token': '5acc11ec40f9441284ce5f90c0467087'},
+        headers={'token': 'your_luxand_token'},
         files={'photo': image}
     )
     detection_result = luxand_response.json()
@@ -477,7 +486,7 @@ def is_human(image):
 def perform_landmark_detection(image):
     luxand_response = requests.post(
         'https://api.luxand.cloud/photo/landmarks',
-        headers={'token': '5acc11ec40f9441284ce5f90c0467087'},
+        headers={'token': 'your_luxand_token'},
         files={'photo': image}
     )
     return luxand_response.json()
