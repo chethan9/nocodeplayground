@@ -8,8 +8,6 @@ import pytz
 from datetime import datetime
 from ytmusicapi import YTMusic
 from pytube import YouTube
-import json
-
 
 
 app = Flask(__name__)
@@ -430,14 +428,8 @@ def autocomplete():
         return jsonify({'error': 'Failed to fetch suggestions'}), 500
 
     try:
-        # Strip off the JSONP padding (function call)
-        jsonp_text = response.text
-        json_text = jsonp_text[jsonp_text.index('(') + 1 : jsonp_text.rindex(')')]
-        data = json.loads(json_text)
-
-        suggestions = data[1]
+        suggestions = response.json()[1]
         terms = [suggestion[0] for suggestion in suggestions]
         return jsonify(terms)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-
