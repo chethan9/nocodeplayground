@@ -446,7 +446,7 @@ def process_image():
     # Step 1: Call Luxand Cloud API for face landmark detection
     luxand_response = requests.post(
         'https://api.luxand.cloud/photo/landmarks',
-        headers={'token': 'your_luxand_token'},
+        headers={'token': '5acc11ec40f9441284ce5f90c0467087 '},
         files={'photo': image}
     )
     face_landmarks = luxand_response.json()
@@ -456,7 +456,7 @@ def process_image():
         'https://api.openai.com/v1/chat/completions',
         headers={
             'Content-Type': 'application/json',
-            'Authorization': 'Bearer your_openai_api_key'
+            'Authorization': 'Bearer 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'
         },
         json={
             'model': 'gpt-3.5-turbo',
