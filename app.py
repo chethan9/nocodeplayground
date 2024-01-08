@@ -436,46 +436,78 @@ def autocomplete():
 
 
 ############################################################################################################################
+
 @app.route('/process_image', methods=['POST'])
 def process_image():
-    # Get image, instruction, and OpenAI API key from the request
-    image = request.files['image']
-    instruction = request.form['instruction']
+    request_type = request.form['type']
+    human_check = request.form.get('human_check', 'false').lower() == 'true'
     openai_api_key = request.form['openai_api_key']
+    system_content = request.form.get('system_content', 'You are an AI capable of processing data')
 
-    # Step 1: Call Luxand Cloud API for face landmark detection
+    if human_check:
+        image = request.files['image']
+        if not is_human(image):
+            return jsonify({'error': 'No human detected in the image'}), 400
+
+    if request_type == 'landmark':
+        return perform_landmark_detection(image)
+
+    elif request_type == 'openapi':
+        user_content = request.form['data']
+        return call_openai_api(system_content, user_content, openai_api_key)
+
+    elif request_type == 'faceapi':
+        image = request.files['image']
+        landmark_result = perform_landmark_detection(image)
+        sanitized_data = sanitize_data(landmark_result)
+        return call_openai_api(system_content, sanitized_data, openai_api_key)
+
+    else:
+        return jsonify({'error': 'Invalid request type'}), 400
+
+def is_human(image):
     luxand_response = requests.post(
-        'https://api.luxand.cloud/photo/landmarks',
-        headers={'token': '5acc11ec40f9441284ce5f90c0467087'},
+        'https://api.luxand.cloud/photo/detect',
+        headers={'token': 'your_luxand_token'},
         files={'photo': image}
     )
-    face_landmarks = luxand_response.json()
+    detection_result = luxand_response.json()
+    return len(detection_result) > 0
 
-    # Step 2: Call OpenAI Chat API
+def perform_landmark_detection(image):
+    luxand_response = requests.post(
+        'https://api.luxand.cloud/photo/landmarks',
+        headers={'token': 'your_luxand_token'},
+        files={'photo': image}
+    )
+    return luxand_response.json()
+
+def call_openai_api(system_content, user_content, api_key):
     openai_response = requests.post(
         'https://api.openai.com/v1/chat/completions',
         headers={
             'Content-Type': 'application/json',
-            'Authorization': f'Bearer {openai_api_key}'
+            'Authorization': f'Bearer {api_key}'
         },
         json={
             'model': 'gpt-3.5-turbo',
             'messages': [
                 {
                     'role': 'system',
-                    'content': 'You are an AI capable of taking face landmarks and providing prediction based on predefined parameters given by user using word specifications'
+                    'content': system_content
                 },
                 {
                     'role': 'user',
-                    'content': f'{face_landmarks} and also {instruction}'
+                    'content': user_content
                 }
             ]
         }
     )
-    chat_response = openai_response.json()
+    return openai_response.json()
 
-    # Process and return the response
-    return jsonify(chat_response)
+def sanitize_data(data):
+    # Implement data sanitization as needed
+    return json.dumps(data)
 
 if __name__ == '__main__':
     app.run(debug=True)
