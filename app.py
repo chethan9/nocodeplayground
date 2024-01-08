@@ -433,3 +433,49 @@ def autocomplete():
         return jsonify(terms)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+############################################################################################################################
+
+@app.route('/process_image', methods=['POST'])
+def process_image():
+    # Get image and instruction from the request
+    image = request.files['image']
+    instruction = request.form['instruction']
+
+    # Step 1: Call Luxand Cloud API for face landmark detection
+    luxand_response = requests.post(
+        'https://api.luxand.cloud/photo/landmarks',
+        headers={'token': 'your_luxand_token'},
+        files={'photo': image}
+    )
+    face_landmarks = luxand_response.json()
+
+    # Step 2: Call OpenAI Chat API
+    openai_response = requests.post(
+        'https://api.openai.com/v1/chat/completions',
+        headers={
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer your_openai_api_key'
+        },
+        json={
+            'model': 'gpt-3.5-turbo',
+            'messages': [
+                {
+                    'role': 'system',
+                    'content': 'You are an AI capable of taking face landmarks and providing prediction based on predefined parameters given by user using word specifications'
+                },
+                {
+                    'role': 'user',
+                    'content': f'{face_landmarks} and also {instruction}'
+                }
+            ]
+        }
+    )
+    chat_response = openai_response.json()
+
+    # Process and return the response
+    return jsonify(chat_response)
+
+if __name__ == '__main__':
+    app.run(debug=True)
