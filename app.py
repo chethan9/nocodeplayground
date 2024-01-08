@@ -459,8 +459,8 @@ def process_image():
     elif request_type == 'faceapi':
         image = request.files['image']
         landmark_result = perform_landmark_detection(image)
-        sanitized_data = sanitize_data(landmark_result)
-        return call_openai_api(system_content, sanitized_data, openai_api_key)
+        serialized_data = json.dumps(landmark_result)
+        return call_openai_api(system_content, serialized_data, openai_api_key)
 
     else:
         return jsonify({'error': 'Invalid request type'}), 400
@@ -468,7 +468,7 @@ def process_image():
 def is_human(image):
     luxand_response = requests.post(
         'https://api.luxand.cloud/photo/detect',
-        headers={'token': 'your_luxand_token'},
+        headers={'token': '5acc11ec40f9441284ce5f90c0467087'},
         files={'photo': image}
     )
     detection_result = luxand_response.json()
@@ -477,12 +477,16 @@ def is_human(image):
 def perform_landmark_detection(image):
     luxand_response = requests.post(
         'https://api.luxand.cloud/photo/landmarks',
-        headers={'token': 'your_luxand_token'},
+        headers={'token': '5acc11ec40f9441284ce5f90c0467087'},
         files={'photo': image}
     )
     return luxand_response.json()
 
 def call_openai_api(system_content, user_content, api_key):
+    # Serialize user_content if it's not a string
+    if not isinstance(user_content, str):
+        user_content = json.dumps(user_content)
+
     openai_response = requests.post(
         'https://api.openai.com/v1/chat/completions',
         headers={
@@ -504,10 +508,6 @@ def call_openai_api(system_content, user_content, api_key):
         }
     )
     return openai_response.json()
-
-def sanitize_data(data):
-    # Implement data sanitization as needed
-    return json.dumps(data)
 
 if __name__ == '__main__':
     app.run(debug=True)
