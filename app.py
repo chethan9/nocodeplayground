@@ -438,64 +438,44 @@ def autocomplete():
 ############################################################################################################################
 
 
-@app.route('/process_image', methods=['POST'])
-def process_image():
-    request_type = request.form['type']
-    human_check = request.form.get('human_check', 'false').lower() == 'true'
+@app.route('/landmark_detection', methods=['POST'])
+def landmark_detection():
+    if 'image' not in request.files:
+        return jsonify({'error': 'Image is required for landmark detection'}), 400
+    
+    image = request.files['image']
+    return perform_landmark_detection(image)
+
+@app.route('/openai_processing', methods=['POST'])
+def openai_processing():
+    openai_api_key = request.form['openai_api_key']
+    user_content = request.form['data']
+    system_content = request.form.get('system_content', 'You are an AI capable of processing data')
+
+    return call_openai_api(system_content, user_content, openai_api_key)
+
+@app.route('/faceapi_processing', methods=['POST'])
+def faceapi_processing():
+    if 'image' not in request.files:
+        return jsonify({'error': 'Image is required for faceapi processing'}), 400
+
+    image = request.files['image']
+    landmark_result = perform_landmark_detection(image)
+    serialized_data = json.dumps(landmark_result)
     openai_api_key = request.form['openai_api_key']
     system_content = request.form.get('system_content', 'You are an AI capable of processing data')
 
-    image = None
-    if 'image' in request.files:
-        image = request.files['image']
-
-    if human_check:
-        if image is None:
-            return jsonify({'error': 'Image is required for human check'}), 400
-        if not is_human(image):
-            return jsonify({'error': 'No human detected in the image'}), 400
-
-    if request_type == 'landmark':
-        if image is None:
-            return jsonify({'error': 'Image is required for landmark detection'}), 400
-        return perform_landmark_detection(image)
-
-    elif request_type == 'openapi':
-        user_content = request.form['data']
-        return call_openai_api(system_content, user_content, openai_api_key)
-
-    elif request_type == 'faceapi':
-        if image is None:
-            return jsonify({'error': 'Image is required for faceapi processing'}), 400
-        landmark_result = perform_landmark_detection(image)
-        serialized_data = json.dumps(landmark_result)
-        return call_openai_api(system_content, serialized_data, openai_api_key)
-
-    else:
-        return jsonify({'error': 'Invalid request type'}), 400
-
-def is_human(image):
-    luxand_response = requests.post(
-        'https://api.luxand.cloud/photo/detect',
-        headers={'token': 'your_luxand_token'},
-        files={'photo': image}
-    )
-    detection_result = luxand_response.json()
-    return len(detection_result) > 0
+    return call_openai_api(system_content, serialized_data, openai_api_key)
 
 def perform_landmark_detection(image):
     luxand_response = requests.post(
         'https://api.luxand.cloud/photo/landmarks',
-        headers={'token': 'your_luxand_token'},
+        headers={'token': '5acc11ec40f9441284ce5f90c0467087'},
         files={'photo': image}
     )
     return luxand_response.json()
 
 def call_openai_api(system_content, user_content, api_key):
-    # Serialize user_content if it's not a string
-    if not isinstance(user_content, str):
-        user_content = json.dumps(user_content)
-
     openai_response = requests.post(
         'https://api.openai.com/v1/chat/completions',
         headers={
