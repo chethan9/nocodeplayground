@@ -508,8 +508,11 @@ def format_json():
         # Get the raw string from the request data
         data = request.data.decode('utf-8')
 
-        # Convert the string to a JSON object by handling escaped characters
-        json_data = json.loads(data)
+        # Replace escaped newlines and quotes
+        formatted_data = data.replace('\\n', '\n').replace('\\"', '"')
+
+        # Convert the string to a JSON object
+        json_data = json.loads(formatted_data)
 
         # Return the pretty-printed JSON
         return jsonify(json_data), 200
