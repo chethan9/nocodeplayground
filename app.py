@@ -505,18 +505,16 @@ if __name__ == '__main__':
 @app.route('/format-json', methods=['POST'])
 def format_json():
     try:
-        # Get the JSON string from the request data
+        # Get the raw string from the request data
         data = request.data.decode('utf-8')
 
-        # Convert the string to a JSON object
+        # Convert the string to a JSON object by handling escaped characters
         json_data = json.loads(data)
 
         # Return the pretty-printed JSON
         return jsonify(json_data), 200
-    except json.JSONDecodeError:
-        return jsonify({"error": "Invalid JSON format"}), 400
-
-# Add other endpoints and configurations as needed
+    except Exception as e:
+        return jsonify({"error": "Invalid JSON format", "details": str(e)}), 400
 
 if __name__ == '__main__':
     app.run(debug=True)
