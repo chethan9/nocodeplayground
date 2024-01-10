@@ -500,3 +500,23 @@ def call_openai_api(system_content, user_content, api_key):
 
 if __name__ == '__main__':
     app.run(debug=True)
+##################################################################################################################################
+
+@app.route('/format-json', methods=['POST'])
+def format_json():
+    try:
+        # Get the JSON string from the request data
+        data = request.data.decode('utf-8')
+
+        # Convert the string to a JSON object
+        json_data = json.loads(data)
+
+        # Return the pretty-printed JSON
+        return jsonify(json_data), 200
+    except json.JSONDecodeError:
+        return jsonify({"error": "Invalid JSON format"}), 400
+
+# Add other endpoints and configurations as needed
+
+if __name__ == '__main__':
+    app.run(debug=True)
