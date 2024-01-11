@@ -538,10 +538,9 @@ if __name__ == '__main__':
     app.run(debug=True)
 
 ##################################################################################################################################
-
 def clean_section_name(section_name):
-    # Remove specific special characters and leading/trailing whitespace
-    cleaned_name = re.sub(r'[\*\#%\^]+', '', section_name).strip()
+    # Remove non-alphanumeric characters and leading/trailing whitespace
+    cleaned_name = re.sub(r'[^a-zA-Z0-9\s]+', '', section_name).strip()
     return cleaned_name
 
 @app.route('/analyze', methods=['POST'])
