@@ -538,11 +538,6 @@ if __name__ == '__main__':
     app.run(debug=True)
 
 ##################################################################################################################################
-def clean_section_name(section_name):
-    # Remove non-alphanumeric characters and leading/trailing whitespace
-    cleaned_name = re.sub(r'[^a-zA-Z0-9\s]+', '', section_name).strip()
-    return cleaned_name
-
 @app.route('/analyze', methods=['POST'])
 def analyze_input():
     input_text = request.json['input_text']
@@ -556,7 +551,6 @@ def analyze_input():
         line = line.strip()
         if line.endswith(':'):
             current_section = line[:-1]
-            current_section = clean_section_name(current_section)
             output[current_section] = {"Description": ""}
         elif current_section is not None:
             if output[current_section]["Description"]:
