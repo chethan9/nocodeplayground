@@ -539,46 +539,28 @@ if __name__ == '__main__':
     app.run(debug=True)
 
 ##################################################################################################################################
-def clean_section_name(section_name):
-    # Remove leading/trailing whitespace and special characters
-    cleaned_name = section_name.strip().strip('*#')
-    return cleaned_name
-
-@app.route('/analyze', methods=['POST'])
+@app.route('/analyze_text', methods=['POST'])
 def analyze_input():
     input_text = request.json['input_text']
     
-    # Define the patterns for different section separators
-    separator_patterns = [r'###', r'\*\*\*', r'\n\n(.*?):']
+    sections = input_text.split('\n')
     
-    # Initialize the list to store section names and descriptions
-    sections = []
-    
-    # Split the input text based on each separator pattern
-    for pattern in separator_patterns:
-        sections = re.split(pattern, input_text)
-        
-        # If sections are found, break out of the loop
-        if len(sections) > 1:
-            break
-    
-    # Process the sections
     output = {}
     current_section = None
     
-    for section in sections:
-        section = section.strip()
-        if section:
-            if section.endswith(':'):
-                current_section = clean_section_name(section)
-                output[current_section] = {"Description": ""}
-            elif current_section is not None:
-                if output[current_section]["Description"]:
-                    output[current_section]["Description"] += ' ' + section
-                else:
-                    output[current_section]["Description"] = section
+    for line in sections:
+        line = line.strip()
+        if line.endswith(':'):
+            current_section = line[:-1]
+            output[current_section] = {"Description": ""}
+        elif current_section is not None:
+            if output[current_section]["Description"]:
+                output[current_section]["Description"] += ' ' + line
+            else:
+                output[current_section]["Description"] = line
     
     return jsonify(output)
 
 if __name__ == '__main__':
     app.run(debug=True)
+
