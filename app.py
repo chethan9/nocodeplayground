@@ -542,20 +542,22 @@ if __name__ == '__main__':
 @app.route('/analyze', methods=['POST'])
 def analyze_input():
     input_text = request.json['input_text']
-    sections = input_text.split('###')
+    
+    sections = input_text.split('\n')
     
     output = {}
-    default_section = None
+    current_section = None
     
-    for section in sections:
-        if ':' in section:
-            section_name, section_content = section.split(':', 1)
-            output[section_name.strip()] = {"Description": section_content.strip()}
-        elif default_section is None:
-            default_section = section.strip()
-    
-    if default_section:
-        output["Default"] = {"Description": default_section}
+    for line in sections:
+        line = line.strip()
+        if line.endswith(':'):
+            current_section = line[:-1]
+            output[current_section] = {"Description": ""}
+        elif current_section is not None:
+            if output[current_section]["Description"]:
+                output[current_section]["Description"] += ' ' + line
+            else:
+                output[current_section]["Description"] = line
     
     return jsonify(output)
 
