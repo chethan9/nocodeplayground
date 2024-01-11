@@ -536,3 +536,28 @@ def serialize_json():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
+##################################################################################################################################
+
+@app.route('/analyze', methods=['POST'])
+def analyze_input():
+    input_text = request.json['input_text']
+    sections = input_text.split('###')
+    
+    output = {}
+    default_section = None
+    
+    for section in sections:
+        if ':' in section:
+            section_name, section_content = section.split(':', 1)
+            output[section_name.strip()] = {"Description": section_content.strip()}
+        elif default_section is None:
+            default_section = section.strip()
+    
+    if default_section:
+        output["Default"] = {"Description": default_section}
+    
+    return jsonify(output)
+
+if __name__ == '__main__':
+    app.run(debug=True)
