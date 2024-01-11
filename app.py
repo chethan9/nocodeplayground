@@ -539,6 +539,11 @@ if __name__ == '__main__':
 
 ##################################################################################################################################
 
+def clean_section_name(section_name):
+    # Remove specific special characters and leading/trailing whitespace
+    cleaned_name = re.sub(r'[\*\#%\^]+', '', section_name).strip()
+    return cleaned_name
+
 @app.route('/analyze', methods=['POST'])
 def analyze_input():
     input_text = request.json['input_text']
@@ -564,4 +569,3 @@ def analyze_input():
 
 if __name__ == '__main__':
     app.run(debug=True)
-
