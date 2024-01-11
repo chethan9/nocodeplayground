@@ -552,6 +552,7 @@ def analyze_input():
         line = line.strip()
         if line.endswith(':'):
             current_section = line[:-1]
+            current_section = clean_section_name(current_section)
             output[current_section] = {"Description": ""}
         elif current_section is not None:
             if output[current_section]["Description"]:
