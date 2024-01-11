@@ -521,3 +521,18 @@ def format_json():
 
 if __name__ == '__main__':
     app.run(debug=True)
+###################################################################################################################################
+
+@app.route('/serialize_json', methods=['POST'])
+def serialize_json():
+    # Get JSON data from the request
+    json_data = request.get_json()
+
+    # Convert JSON object to string
+    serialized_data = str(json_data).replace("'", "\"").replace(" ", "")
+
+    # Return serialized JSON as a string
+    return jsonify({'serialized_json': serialized_data})
+
+if __name__ == '__main__':
+    app.run(debug=True)
