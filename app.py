@@ -10,10 +10,6 @@ from ytmusicapi import YTMusic
 from pytube import YouTube
 import json
 import re
-import dlib
-import numpy as np
-from PIL import Image
-import io
 
 app = Flask(__name__)
 ytmusic = YTMusic()
@@ -562,50 +558,6 @@ def analyze_input():
         output["Default"] = {"Description": default_section}
     
     return jsonify(output)
-
-if __name__ == '__main__':
-    app.run(debug=True)
-
-#######################################################################################################################################
-
-# Initialize the dlib face detector and the shape predictor
-detector = dlib.get_frontal_face_detector()
-predictor = dlib.shape_predictor('shape_predictor_68_face_landmarks.dat')
-
-@app.route('/detect_landmarks', methods=['POST'])
-def detect_landmarks():
-    if 'image' not in request.files:
-        return jsonify({"error": "No image file"}), 400
-
-    file = request.files['image']
-    if file.filename == '':
-        return jsonify({"error": "No selected file"}), 400
-
-    try:
-        # Load the image into PIL
-        image = Image.open(io.BytesIO(file.read()))
-        image = np.array(image)
-
-        # Convert RGB to BGR (for dlib)
-        if image.shape[2] == 3:  # If it's not already in grayscale
-            image = image[:, :, ::-1]
-
-        # Detect faces
-        faces = detector(image)
-
-        # Now process each face we found.
-        landmarks_data = []
-        for face in faces:
-            landmarks = predictor(image, face)
-            # Convert landmarks to a list of tuples
-            landmarks_list = [(p.x, p.y) for p in landmarks.parts()]
-            landmarks_data.append(landmarks_list)
-
-        # Return the result as JSON
-        return jsonify(landmarks_data)
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
