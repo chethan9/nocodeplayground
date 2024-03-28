@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_file
 import os
 import pandas as pd
 import openpyxl
@@ -10,6 +10,8 @@ from ytmusicapi import YTMusic
 from pytube import YouTube
 import json
 import re
+from PIL import Image
+import io
 
 app = Flask(__name__)
 ytmusic = YTMusic()
@@ -558,6 +560,40 @@ def analyze_input():
         output["Default"] = {"Description": default_section}
     
     return jsonify(output)
+
+if __name__ == '__main__':
+    app.run(debug=True)
+##################################################################################################################################
+
+@app.route('/convert-to-jpeg', methods=['POST'])
+def convert_to_jpeg():
+    # Check if the request has the file part
+    if 'file' not in request.files:
+        return {'message': 'No file part in the request'}, 400
+
+    file = request.files['file']
+
+    # If the user does not select a file, the browser submits an
+    # empty file without a filename.
+    if file.filename == '':
+        return {'message': 'No selected file'}, 400
+
+    try:
+        # Convert the image to JPEG
+        image = Image.open(file)
+        # If the image is already a JPEG, we don't need to convert it
+        if image.format == 'JPEG':
+            output = io.BytesIO()
+            file.save(output)
+            output.seek(0)
+        else:
+            output = io.BytesIO()
+            image.save(output, format='JPEG')
+            output.seek(0)
+
+        return send_file(output, mimetype='image/jpeg')
+    except Exception as e:
+        return {'message': str(e)}, 500
 
 if __name__ == '__main__':
     app.run(debug=True)
