@@ -12,6 +12,9 @@ import json
 import re
 from PIL import Image
 import io
+import cv2 as cv
+import numpy as np
+import mediapipe as mp
 
 app = Flask(__name__)
 ytmusic = YTMusic()
@@ -594,6 +597,89 @@ def convert_to_jpeg():
         return send_file(output, mimetype='image/jpeg')
     except Exception as e:
         return {'message': str(e)}, 500
+
+if __name__ == '__main__':
+    app.run(debug=True)
+
+##########################################################################################################################
+    
+# Function to detect face and find out landmarks using Mediapipe lib
+def detect_landmarks(image_path):
+    # Load image
+    image = cv2.imread(image_path)
+    image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    height, width, _ = image.shape
+
+    # Initialize MediaPipe face detection and face landmark models
+    mp_face_detection = mp.solutions.face_detection
+    mp_face_mesh = mp.solutions.face_mesh
+    face_detection = mp_face_detection.FaceDetection(min_detection_confidence=0.5)
+    face_mesh = mp_face_mesh.FaceMesh(static_image_mode=True, max_num_faces=1, min_detection_confidence=0.5)
+
+    # Detect faces in the image
+    results_detection = face_detection.process(image_rgb)
+    if results_detection.detections:
+        for detection in results_detection.detections:
+            bboxC = detection.location_data.relative_bounding_box
+            x, y, w, h = int(bboxC.xmin * width), int(bboxC.ymin * height), \
+                         int(bboxC.width * width), int(bboxC.height * height)
+
+            # Crop face region
+            face_region = image[y:y+h, x:x+w]
+
+            # Detect face landmarks
+            results_landmarks = face_mesh.process(cv2.cvtColor(face_region, cv2.COLOR_BGR2RGB))
+            if results_landmarks.multi_face_landmarks:
+                landmark_coords = []
+                for face_landmarks in results_landmarks.multi_face_landmarks:
+                    for landmark in face_landmarks.landmark:
+                        cx, cy = int(landmark.x * w), int(landmark.y * h)
+                        landmark_coords.append((cx, cy))
+
+                # Draw landmarks on the image
+                for landmark in landmark_coords:
+                    cv2.circle(face_region, landmark, 1, (0, 255, 0), -1)
+
+                # Convert image to bytes
+                ret, buffer = cv2.imencode('.jpg', face_region)
+                image_bytes = io.BytesIO(buffer)
+                return {"success": True, "image": image_bytes.getvalue(), "landmark_coordinates": landmark_coords}
+
+    return {"success": False, "message": "No face detected in the image."}
+
+@app.route('/detect_landmarks', methods=['POST'])
+def detect_landmarks_api():
+    # Check if an image file is present in the request
+    if 'image' not in request.files:
+        return jsonify({"success": False, "message": "No image found in the request."}), 400
+
+    image_file = request.files['image']
+
+    # Check if the file is a valid image
+    if image_file.filename == '':
+        return jsonify({"success": False, "message": "Empty image filename."}), 400
+    if not image_file:
+        return jsonify({"success": False, "message": "Invalid image file."}), 400
+
+    try:
+        # Save the image temporarily
+        image_path = 'temp_image.jpg'
+        image_file.save(image_path)
+
+        # Detect face landmarks
+        result = detect_landmarks(image_path)
+
+        # Delete the temporary image file
+        os.remove(image_path)
+
+        if result["success"]:
+            # Return the processed image with detected landmarks and landmark coordinates
+            return jsonify({"success": True, "image": result["image"], "landmark_coordinates": result["landmark_coordinates"]})
+        else:
+            return jsonify(result), 400
+
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
