@@ -38,7 +38,7 @@ RUN apt-get update && \
 ADD . /app
 
 # Install necessary packages, including dlib
-RUN pip install --no-cache-dir dlib
+# RUN pip install --no-cache-dir dlib
 
 # Install other Python packages
 RUN pip install --no-cache-dir flask werkzeug beautifulsoup4 pytube ytmusicapi requests chardet ffmpeg-python gunicorn parse-torrent-title pyjwt selenium cinemagoer jsmin css_html_js_minify cssutils htmlmin instaloader instagrapi Pillow>=8.1.1 twilio pandas openpyxl numpy opencv-python mediapipe
