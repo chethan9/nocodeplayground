@@ -606,8 +606,8 @@ if __name__ == '__main__':
 # Function to detect face and find out landmarks using Mediapipe lib
 def detect_landmarks(image_path):
     # Load image
-    image = cv2.imread(image_path)
-    image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    image = cv.imread(image_path)
+    image_rgb = cv.cvtColor(image, cv.COLOR_BGR2RGB)
     height, width, _ = image.shape
 
     # Initialize MediaPipe face detection and face landmark models
@@ -628,7 +628,7 @@ def detect_landmarks(image_path):
             face_region = image[y:y+h, x:x+w]
 
             # Detect face landmarks
-            results_landmarks = face_mesh.process(cv2.cvtColor(face_region, cv2.COLOR_BGR2RGB))
+            results_landmarks = face_mesh.process(cv.cvtColor(face_region, cv.COLOR_BGR2RGB))
             if results_landmarks.multi_face_landmarks:
                 landmark_coords = []
                 for face_landmarks in results_landmarks.multi_face_landmarks:
@@ -638,10 +638,10 @@ def detect_landmarks(image_path):
 
                 # Draw landmarks on the image
                 for landmark in landmark_coords:
-                    cv2.circle(face_region, landmark, 1, (0, 255, 0), -1)
+                    cv.circle(face_region, landmark, 1, (0, 255, 0), -1)
 
                 # Convert image to bytes
-                ret, buffer = cv2.imencode('.jpg', face_region)
+                ret, buffer = cv.imencode('.jpg', face_region)
                 image_bytes = io.BytesIO(buffer)
                 return {"success": True, "image": image_bytes.getvalue(), "landmark_coordinates": landmark_coords}
 
