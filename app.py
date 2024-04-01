@@ -674,7 +674,7 @@ def detect_landmarks_api():
 
         if result["success"]:
             # Return the processed image with detected landmarks and landmark coordinates
-            return jsonify({"success": True, "image": result["image"], "landmark_coordinates": result["landmark_coordinates"]})
+            return jsonify({"success": True, "landmark_coordinates": result["landmark_coordinates"]})
         else:
             return jsonify(result), 400
 
