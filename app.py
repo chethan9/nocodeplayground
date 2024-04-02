@@ -19,6 +19,8 @@ import mediapipe as mp
 app = Flask(__name__)
 ytmusic = YTMusic()
 
+image_with_landmark = None
+
 def create_app():
     app = Flask(__name__, static_folder='uploads', static_url_path='/uploads')
     app.config['UPLOAD_FOLDER'] = '/app/uploads/'
@@ -640,12 +642,14 @@ def detect_landmarks(image_path):
                 for landmark in landmark_coords:
                     cv.circle(face_region, landmark, 1, (0, 255, 0), -1)
 
-                # Convert image to bytes
-                ret, buffer = cv.imencode('.jpg', face_region)
-                image_bytes = io.BytesIO(buffer)
-                return {"success": True, "image": image_bytes.getvalue(), "landmark_coordinates": landmark_coords}
+                # Save the image with landmarks drawn
+                global image_with_landmark
+                image_with_landmark = 'temp_image_with_landmarks.jpg'
+                cv.imwrite(image_with_landmark, face_region)
 
-    return {"success": False, "message": "No face detected in the image."}
+                return {"success": True, "image": image_with_landmark, "landmark_coordinates": landmark_coords}
+
+    return {"success": False, "message": "No human face detected in the image."}
 
 @app.route('/detect_landmarks', methods=['POST'])
 def detect_landmarks_api():
@@ -673,13 +677,27 @@ def detect_landmarks_api():
         os.remove(image_path)
 
         if result["success"]:
-            # Return the processed image with detected landmarks and landmark coordinates
-            return jsonify({"success": True, "landmark_coordinates": result["landmark_coordinates"]})
+            # Return the processed landmark coordinates
+            response_json = {"landmark_coordinates": result["landmark_coordinates"]}
+            return jsonify(response_json), 200
         else:
             return jsonify(result), 400
 
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 500
+
+if __name__ == '__main__':
+    app.run(debug=True)
+    
+###################################################################################################
+# Api is to retrive the landmarked image
+@app.route('/get_landmark_image', methods=['GET'])
+def get_landmark_image():
+    # Path to the image file
+    global image_with_landmark
+
+    # Return the image file
+    return send_file(image_with_landmark, mimetype='image/jpg')
 
 if __name__ == '__main__':
     app.run(debug=True)
