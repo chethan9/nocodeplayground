@@ -701,3 +701,27 @@ def get_landmark_image():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
+###################################################################################################
+#Api is to clean the landmark coordinates from json fromat to text
+
+@app.route('/clean_json', methods=['POST'])
+def clean_json():
+    # Get the JSON data from the request
+    json_data = request.get_json()
+
+    # Extract landmark coordinates
+    landmark_coordinates = json_data.get('landmark_coordinates')
+
+    # Prepare the text output with coordinates as list of lists
+    text_output = "{"
+    for coordinates in landmark_coordinates:
+        text_output += f"[{coordinates[0]}, {coordinates[1]}], "
+    text_output = text_output.rstrip(", ")  # remove the last comma and space
+    text_output += "}"
+
+    # Return the text output
+    return text_output
+
+if __name__ == '__main__':
+    app.run(debug=True)
