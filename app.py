@@ -516,8 +516,11 @@ def format_json():
         # Get the raw string from the request data
         data = request.data.decode('utf-8')
 
+        # Remove quotes at start and end
+        filtered_data = re.sub(r'^\"|\"$', '', data)
+
         # Replace escaped newlines and quotes
-        formatted_data = data.replace('\\n', '\n').replace('\\"', '"')
+        formatted_data = filtered_data.replace('\\n', '\n').replace('\\"', '"')
 
         # Convert the string to a JSON object
         json_data = json.loads(formatted_data)
