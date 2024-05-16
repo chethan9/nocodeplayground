@@ -516,11 +516,8 @@ def format_json():
         # Get the raw string from the request data
         data = request.data.decode('utf-8')
 
-        # Remove quotes at start and end
-        filtered_data = re.sub(r'^\"|\"$', '', data)
-
         # Replace escaped newlines and quotes
-        formatted_data = filtered_data.replace('\\n', '\n').replace('\\"', '"')
+        formatted_data = data.replace('\\n', '\n').replace('\\"', '"')
 
         # Convert the string to a JSON object
         json_data = json.loads(formatted_data)
@@ -725,6 +722,34 @@ def clean_json():
 
     # Return the text output
     return text_output
+
+if __name__ == '__main__':
+    app.run(debug=True)
+
+###################################################################################################
+#Api to check folder status in vdocipher
+
+@app.route('/folder_status', methods=['POST'])
+def folder_status():
+    data = request.json
+    folder_name = data.get('name')
+
+    if not folder_name:
+        return jsonify({"error": "Folder name is required"}), 400
+
+    url = "https://dev.vdocipher.com/api/videos/folders/search"
+    payload = json.dumps({"name": folder_name})
+    headers = {
+        'content-type': 'application/json',
+        'Authorization': 'Apisecret vBEWfxrM2S60wYiLfpyNT2vD5PNvuKKWmCXJCeyJY0Y02ZCXoqEIUcXvs7xzAg74'
+    }
+
+    try:
+        response = requests.post(url, headers=headers, data=payload)
+        response.raise_for_status()
+        return jsonify(response.json()), response.status_code
+    except requests.exceptions.RequestException as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
