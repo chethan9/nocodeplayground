@@ -753,3 +753,102 @@ def folder_status():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
+
+###################################################################################################
+# Api to Send opt via OPTLESS to user Whatsapp number
+
+@app.route('/send_opt_whatsapp', methods=['POST'])
+def send_otp():
+    data = request.json
+    phoneNumber = data.get('phoneNumber')
+
+    if not phoneNumber:
+        return jsonify({"error": "Phone number is required"}), 400
+
+    url = "https://auth.otpless.app/auth/otp/v1/send"
+
+    payload = json.dumps({"phoneNumber": phoneNumber,
+                          "otpLength": 6,
+                          "channel": "WHATSAPP",
+                          "expiry": 300})
+    
+    headers = {'clientId': '9pfotv2x',
+               'clientSecret': 'mcko5gfabcctjyep',
+               'Content-Type': 'application/json'}
+
+    try:
+        response = requests.post(url, headers=headers, data=payload)
+        response.raise_for_status()
+        return jsonify(response.json()), response.status_code
+    except requests.exceptions.RequestException as e:
+        return jsonify({"error": str(e)}), 500
+
+if __name__ == '__main__':
+    app.run(debug=True)
+
+###################################################################################################
+# Api to Resend opt via OPTLESS to user Whatsapp number
+
+@app.route('/resend_opt_whatsapp', methods=['POST'])
+def resend_otp():
+    data = request.json
+    orderId = data.get('orderId')
+
+    if not orderId:
+        return jsonify({"error": "Order Id is required"}), 400
+
+    url = "https://auth.otpless.app/auth/otp/v1/resend"
+
+    payload = json.dumps({"orderId": orderId,})
+    
+    headers = {'clientId': '9pfotv2x',
+               'clientSecret': 'mcko5gfabcctjyep',
+               'Content-Type': 'application/json'}
+
+    try:
+        response = requests.post(url, headers=headers, data=payload)
+        response.raise_for_status()
+        return jsonify(response.json()), response.status_code
+    except requests.exceptions.RequestException as e:
+        return jsonify({"error": str(e)}), 500
+
+if __name__ == '__main__':
+    app.run(debug=True)
+
+###################################################################################################
+# Api to Verify opt sentby OPTLESS to user Whatsapp number
+
+@app.route('/verify_opt_whatsapp', methods=['POST'])
+def verify_otp():
+    data = request.json
+    orderId = data.get('orderId')
+    otp = data.get('otp')
+    phoneNumber = data.get('phoneNumber')
+
+    if not orderId:
+        return jsonify({"error": "Order Id is required"}), 400
+    elif not otp:
+        return jsonify({"error": "Otp is required"}), 400
+    elif not phoneNumber:
+        return jsonify({"error": "phone number is required"}), 400
+
+    url = "https://auth.otpless.app/auth/otp/v1/verify"
+
+    payload = json.dumps({"orderId": orderId,
+                          "otp": otp,
+                          "phoneNumber": phoneNumber})
+    
+    headers = {'clientId': '9pfotv2x',
+               'clientSecret': 'mcko5gfabcctjyep',
+               'Content-Type': 'application/json'}
+
+    try:
+        response = requests.post(url, headers=headers, data=payload)
+        response.raise_for_status()
+        return jsonify(response.json()), response.status_code
+    except requests.exceptions.RequestException as e:
+        return jsonify({"error": str(e)}), 500
+
+if __name__ == '__main__':
+    app.run(debug=True)
