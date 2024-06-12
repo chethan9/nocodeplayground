@@ -852,3 +852,27 @@ def verify_otp():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
+###############################################################################################################################
+# Api for vdoCipher to List all items present in parent folder
+# pass the folder_id with url 
+
+@app.route('/list_folders/<folder_id>', methods=['GET'])
+def list_all_folders(folder_id):
+
+
+    url = f"https://dev.vdocipher.com/api/videos/folders/{folder_id}"
+
+    headers = {
+        'Authorization': 'Apisecret vBEWfxrM2S60wYiLfpyNT2vD5PNvuKKWmCXJCeyJY0Y02ZCXoqEIUcXvs7xzAg74'
+    }
+
+    try:
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+        return jsonify(response.json()), response.status_code
+    except requests.exceptions.RequestException as e:
+        return jsonify({"error": str(e)}), 500
+
+if __name__ == '__main__':
+    app.run(debug=True)
