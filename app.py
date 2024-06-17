@@ -879,6 +879,7 @@ if __name__ == '__main__':
 ###################################################################################################################################
 API_SECRET = 'DMuGqc1l6UtISGaXFurzhyWF07MYJRNNELUtS6jxfFyJ26i88gzKrE5Yo27KqKlh'
 VDO_API_URL = 'https://dev.vdocipher.com/api/videos/{videoid}/files'
+VDO_FILE_URL = 'https://dev.vdocipher.com/api/videos/{videoid}/files/{fileid}'
 
 @app.route('/videos/<videoid>/files', methods=['GET'])
 def get_video_files(videoid):
@@ -891,13 +892,35 @@ def get_video_files(videoid):
 
     if response.status_code == 200:
         data = response.json()
-        # Filter for items with 'encryption_type' == 'original'
-        filtered_data = [item for item in data if item.get('encryption_type') == 'original']
-        if filtered_data:
-            # Return the filtered item (as a list)
-            return jsonify(filtered_data), 200
+
+        # Check for the filter parameter
+        filter_data = request.args.get('filter', 'yes')
+        if filter_data == 'yes':
+            filtered_data = [item for item in data if item.get('encryption_type') == 'original']
         else:
+            filtered_data = data
+
+        # Check for the downloadlink parameter
+        downloadlink = request.args.get('downloadlink', 'no')
+        if filter_data == 'no' and downloadlink == 'yes':
+            return jsonify({"error": "Cannot use downloadlink when filter is set to 'no'"}), 400
+
+        if downloadlink == 'yes' and filter_data == 'yes':
+            if filtered_data:
+                fileid = filtered_data[0]['id']
+                file_url = VDO_FILE_URL.format(videoid=videoid, fileid=fileid)
+                file_response = requests.get(file_url, headers=headers)
+
+                if file_response.status_code == 200:
+                    file_data = file_response.json()
+                    filtered_data[0]['file_info'] = file_data
+                else:
+                    return jsonify({"error": file_response.text}), file_response.status_code
+
+        # Return the filtered data or the entire data
+        if filter_data == 'yes' and not filtered_data:
             return jsonify({"error": "no data"}), 404
+        return jsonify(filtered_data), 200
     else:
         return jsonify({"error": response.text}), response.status_code
 
