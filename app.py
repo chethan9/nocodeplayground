@@ -891,8 +891,10 @@ def get_video_files(videoid):
 
     if response.status_code == 200:
         data = response.json()
+        # Filter for items with 'encryption_type' == 'original'
         filtered_data = [item for item in data if item.get('encryption_type') == 'original']
         if filtered_data:
+            # Return the filtered item (as a list)
             return jsonify(filtered_data), 200
         else:
             return jsonify({"error": "no data"}), 404
