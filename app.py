@@ -877,24 +877,22 @@ def list_all_folders(folder_id):
 if __name__ == '__main__':
     app.run(debug=True)
 ###################################################################################################################################
+API_SECRET = 'DMuGqc1l6UtISGaXFurzhyWF07MYJRNNELUtS6jxfFyJ26i88gzKrE5Yo27KqKlh'
+VDO_API_URL = 'https://dev.vdocipher.com/api/videos/{videoid}/files'
 
-VDO_CIPHER_API_SECRET = "DMuGqc1l6UtISGaXFurzhyWF07MYJRNNELUtS6jxfFyJ26i88gzKrE5Yo27KqKlh"  # replace with your actual secret
-VDO_CIPHER_VIDEO_API_URL = "https://dev.vdocipher.com/api/videos/"
-
-@app.route("/video_files/<videoID>", methods=["GET"])
-def get_video_files(videoID):
-    # Create the URL with the videoID
-    url = f"{VDO_CIPHER_VIDEO_API_URL}{videoID}/files"
-
+@app.route('/videos/<videoid>/files', methods=['GET'])
+def get_video_files(videoid):
     headers = {
-        "Authorization": f"Apisecret {VDO_CIPHER_API_SECRET}"
+        'Authorization': f'Apisecret {API_SECRET}'
     }
 
-    # Make the GET request
+    url = VDO_API_URL.format(videoid=videoid)
     response = requests.get(url, headers=headers)
 
-    # Forward the response
-    return jsonify(response.json())
+    if response.status_code == 200:
+        return jsonify(response.json()), 200
+    else:
+        return jsonify({"error": response.text}), response.status_code
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     app.run(debug=True)
