@@ -876,3 +876,25 @@ def list_all_folders(folder_id):
 
 if __name__ == '__main__':
     app.run(debug=True)
+###################################################################################################################################
+
+VDO_CIPHER_API_SECRET = "DMuGqc1l6UtISGaXFurzhyWF07MYJRNNELUtS6jxfFyJ26i88gzKrE5Yo27KqKlh"  # replace with your actual secret
+VDO_CIPHER_VIDEO_API_URL = "https://dev.vdocipher.com/api/videos/"
+
+@app.route("/video_files/<videoID>", methods=["GET"])
+def get_video_files(videoID):
+    # Create the URL with the videoID
+    url = f"{VDO_CIPHER_VIDEO_API_URL}{videoID}/files"
+
+    headers = {
+        "Authorization": f"Apisecret {VDO_CIPHER_API_SECRET}"
+    }
+
+    # Make the GET request
+    response = requests.get(url, headers=headers)
+
+    # Forward the response
+    return jsonify(response.json())
+
+if __name__ == "__main__":
+    app.run(debug=True)
