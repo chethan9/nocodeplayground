@@ -926,3 +926,23 @@ def get_video_files(videoid):
 
 if __name__ == '__main__':
     app.run(debug=True)
+
+@app.route('/videos_tagwise/tag=<tagname>/pageno=<pageno>/limit=<limit>', methods=['GET'])
+def list_videos_tagwise(tagname,pageno,limit):
+
+
+    url = f"https://dev.vdocipher.com/api/videos?tags={tagname}&page={pageno}&limit={limit}"
+
+    headers = {
+        'Authorization': 'Apisecret vBEWfxrM2S60wYiLfpyNT2vD5PNvuKKWmCXJCeyJY0Y02ZCXoqEIUcXvs7xzAg74'
+    }
+
+    try:
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+        return jsonify(response.json()), response.status_code
+    except requests.exceptions.RequestException as e:
+        return jsonify({"error": str(e)}), 500
+
+if __name__ == '__main__':
+    app.run(debug=True)
