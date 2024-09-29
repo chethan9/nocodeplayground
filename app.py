@@ -15,6 +15,8 @@ import io
 import cv2 as cv
 import numpy as np
 import mediapipe as mp
+import yt_dlp
+
 
 app = Flask(__name__)
 ytmusic = YTMusic()
@@ -944,5 +946,51 @@ def list_videos_tagwise(tagname,pageno,limit):
     except requests.exceptions.RequestException as e:
         return jsonify({"error": str(e)}), 500
 
+if __name__ == '__main__':
+    app.run(debug=True)
+
+###################################################################################################################
+
+@app.route('/eztube_links', methods=['GET'])
+def eztube_links():
+    video_url = request.args.get('url')
+    if not video_url:
+        return jsonify({"error": "No URL provided"}), 400
+
+    ydl_opts = {
+        'format': 'bestaudio/best',
+        'quiet': True,
+        'no_warnings': True,
+        'extract_flat': True,
+    }
+
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(video_url, download=False)
+            
+            formats = info.get('formats', [])
+            download_links = []
+
+            for f in formats:
+                format_id = f.get('format_id')
+                extension = f.get('ext')
+                resolution = f.get('resolution')
+                filesize = f.get('filesize')
+                
+                if 'url' in f:
+                    download_links.append({
+                        "format_id": format_id,
+                        "extension": extension,
+                        "resolution": resolution,
+                        "filesize": filesize,
+                        "url": f['url']
+                    })
+
+            return jsonify({
+                "title": info.get('title'),
+                "download_links": download_links
+            })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 if __name__ == '__main__':
     app.run(debug=True)
