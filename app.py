@@ -18,7 +18,7 @@ import mediapipe as mp
 
 app = Flask(__name__)
 ytmusic = YTMusic()
-
+ 
 image_with_landmark = None
 
 def create_app():
@@ -746,6 +746,199 @@ def folder_status():
 
     try:
         response = requests.post(url, headers=headers, data=payload)
+        response.raise_for_status()
+        return jsonify(response.json()), response.status_code
+    except requests.exceptions.RequestException as e:
+        return jsonify({"error": str(e)}), 500
+
+if __name__ == '__main__':
+    app.run(debug=True)
+
+
+###################################################################################################
+# Api to Send opt via OPTLESS to user Whatsapp number
+
+@app.route('/send_opt_whatsapp', methods=['POST'])
+def send_otp():
+    data = request.json
+    phoneNumber = data.get('phoneNumber')
+
+    if not phoneNumber:
+        return jsonify({"error": "Phone number is required"}), 400
+
+    url = "https://auth.otpless.app/auth/otp/v1/send"
+
+    payload = json.dumps({"phoneNumber": phoneNumber,
+                          "otpLength": 6,
+                          "channel": "WHATSAPP",
+                          "expiry": 300})
+    
+    headers = {'clientId': '9pfotv2x',
+               'clientSecret': 'mcko5gfabcctjyep',
+               'Content-Type': 'application/json'}
+
+    try:
+        response = requests.post(url, headers=headers, data=payload)
+        response.raise_for_status()
+        return jsonify(response.json()), response.status_code
+    except requests.exceptions.RequestException as e:
+        return jsonify({"error": str(e)}), 500
+
+if __name__ == '__main__':
+    app.run(debug=True)
+
+###################################################################################################
+# Api to Resend opt via OPTLESS to user Whatsapp number
+
+@app.route('/resend_opt_whatsapp', methods=['POST'])
+def resend_otp():
+    data = request.json
+    orderId = data.get('orderId')
+
+    if not orderId:
+        return jsonify({"error": "Order Id is required"}), 400
+
+    url = "https://auth.otpless.app/auth/otp/v1/resend"
+
+    payload = json.dumps({"orderId": orderId,})
+    
+    headers = {'clientId': '9pfotv2x',
+               'clientSecret': 'mcko5gfabcctjyep',
+               'Content-Type': 'application/json'}
+
+    try:
+        response = requests.post(url, headers=headers, data=payload)
+        response.raise_for_status()
+        return jsonify(response.json()), response.status_code
+    except requests.exceptions.RequestException as e:
+        return jsonify({"error": str(e)}), 500
+
+if __name__ == '__main__':
+    app.run(debug=True)
+
+###################################################################################################
+# Api to Verify opt sentby OPTLESS to user Whatsapp number
+
+@app.route('/verify_opt_whatsapp', methods=['POST'])
+def verify_otp():
+    data = request.json
+    orderId = data.get('orderId')
+    otp = data.get('otp')
+    phoneNumber = data.get('phoneNumber')
+
+    if not orderId:
+        return jsonify({"error": "Order Id is required"}), 400
+    elif not otp:
+        return jsonify({"error": "Otp is required"}), 400
+    elif not phoneNumber:
+        return jsonify({"error": "phone number is required"}), 400
+
+    url = "https://auth.otpless.app/auth/otp/v1/verify"
+
+    payload = json.dumps({"orderId": orderId,
+                          "otp": otp,
+                          "phoneNumber": phoneNumber})
+    
+    headers = {'clientId': '9pfotv2x',
+               'clientSecret': 'mcko5gfabcctjyep',
+               'Content-Type': 'application/json'}
+
+    try:
+        response = requests.post(url, headers=headers, data=payload)
+        response.raise_for_status()
+        return jsonify(response.json()), response.status_code
+    except requests.exceptions.RequestException as e:
+        return jsonify({"error": str(e)}), 500
+
+if __name__ == '__main__':
+    app.run(debug=True)
+
+###############################################################################################################################
+# Api for vdoCipher to List all items present in parent folder
+# pass the folder_id with url 
+
+@app.route('/list_folders/<folder_id>', methods=['GET'])
+def list_all_folders(folder_id):
+
+
+    url = f"https://dev.vdocipher.com/api/videos/folders/{folder_id}"
+
+    headers = {
+        'Authorization': 'Apisecret vBEWfxrM2S60wYiLfpyNT2vD5PNvuKKWmCXJCeyJY0Y02ZCXoqEIUcXvs7xzAg74'
+    }
+
+    try:
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+        return jsonify(response.json()), response.status_code
+    except requests.exceptions.RequestException as e:
+        return jsonify({"error": str(e)}), 500
+
+if __name__ == '__main__':
+    app.run(debug=True)
+###################################################################################################################################
+API_SECRET = 'DMuGqc1l6UtISGaXFurzhyWF07MYJRNNELUtS6jxfFyJ26i88gzKrE5Yo27KqKlh'
+VDO_API_URL = 'https://dev.vdocipher.com/api/videos/{videoid}/files'
+VDO_FILE_URL = 'https://dev.vdocipher.com/api/videos/{videoid}/files/{fileid}'
+
+@app.route('/videos/<videoid>/files', methods=['GET'])
+def get_video_files(videoid):
+    headers = {
+        'Authorization': f'Apisecret {API_SECRET}'
+    }
+
+    url = VDO_API_URL.format(videoid=videoid)
+    response = requests.get(url, headers=headers)
+
+    if response.status_code == 200:
+        data = response.json()
+
+        # Check for the filter parameter
+        filter_data = request.args.get('filter', 'yes')
+        if filter_data == 'yes':
+            filtered_data = [item for item in data if item.get('encryption_type') == 'original']
+        else:
+            filtered_data = data
+
+        # Check for the downloadlink parameter
+        downloadlink = request.args.get('downloadlink', 'no')
+        if filter_data == 'no' and downloadlink == 'yes':
+            return jsonify({"error": "Cannot use downloadlink when filter is set to 'no'"}), 400
+
+        if downloadlink == 'yes' and filter_data == 'yes':
+            if filtered_data:
+                fileid = filtered_data[0]['id']
+                file_url = VDO_FILE_URL.format(videoid=videoid, fileid=fileid)
+                file_response = requests.get(file_url, headers=headers)
+
+                if file_response.status_code == 200:
+                    file_data = file_response.json()
+                    filtered_data[0]['file_info'] = file_data
+                else:
+                    return jsonify({"error": file_response.text}), file_response.status_code
+
+        # Return the filtered data or the entire data
+        if filter_data == 'yes' and not filtered_data:
+            return jsonify({"error": "no data"}), 404
+        return jsonify(filtered_data), 200
+    else:
+        return jsonify({"error": response.text}), response.status_code
+
+if __name__ == '__main__':
+    app.run(debug=True)
+
+@app.route('/videos_tagwise/tag=<tagname>/pageno=<pageno>/limit=<limit>', methods=['GET'])
+def list_videos_tagwise(tagname,pageno,limit):
+
+
+    url = f"https://dev.vdocipher.com/api/videos?tags={tagname}&page={pageno}&limit={limit}"
+
+    headers = {
+        'Authorization': 'Apisecret vBEWfxrM2S60wYiLfpyNT2vD5PNvuKKWmCXJCeyJY0Y02ZCXoqEIUcXvs7xzAg74'
+    }
+
+    try:
+        response = requests.get(url, headers=headers)
         response.raise_for_status()
         return jsonify(response.json()), response.status_code
     except requests.exceptions.RequestException as e:
