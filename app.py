@@ -927,6 +927,9 @@ def get_video_files(videoid):
 if __name__ == '__main__':
     app.run(debug=True)
 
+########################################################################
+# API to fetch videos tagwise and paginate them
+
 @app.route('/videos_tagwise/tag=<tagname>/pageno=<pageno>/limit=<limit>', methods=['GET'])
 def list_videos_tagwise(tagname,pageno,limit):
 
@@ -946,3 +949,33 @@ def list_videos_tagwise(tagname,pageno,limit):
 
 if __name__ == '__main__':
     app.run(debug=True)
+
+########################################################################
+# API to update the tags of videos
+
+@app.route('/update_video_tags', methods=['PUT'])
+def update_video_tags():
+
+    data = request.json
+    videos = data.get('videos', [])
+    tags = data.get('tags', [])
+
+    if not data or 'videos' not in data or 'tags' not in data:
+        return jsonify({"error": "Invalid request data"}), 400
+    
+    url = "https://dev.vdocipher.com/api/videos/tags"
+
+    headers = {
+        'content-type': 'application/json',
+        'Authorization': 'Apisecret vBEWfxrM2S60wYiLfpyNT2vD5PNvuKKWmCXJCeyJY0Y02ZCXoqEIUcXvs7xzAg74'
+    }
+
+    payload = json.dumps({"videos": videos,"tags": tags})
+
+
+    response = requests.put(url, data=payload, headers=headers)
+
+    if response.status_code == 200:
+        return jsonify({"message": "Tags updated successfully", "response": response.json()}), 200
+    else:
+        return jsonify({"error": "Failed to update tags", "response": response.json()}), response.status_code
