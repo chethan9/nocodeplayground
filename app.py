@@ -10,11 +10,14 @@ from ytmusicapi import YTMusic
 from pytube import YouTube
 import json
 import re
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 import io
 import cv2 as cv
 import numpy as np
 import mediapipe as mp
+import fitz  # PyMuPDF
+import urllib.parse 
+from docx import Document
 
 app = Flask(__name__)
 ytmusic = YTMusic()
@@ -979,3 +982,186 @@ def update_video_tags():
         return jsonify({"message": "Tags updated successfully", "response": response.json()}), 200
     else:
         return jsonify({"error": "Failed to update tags", "response": response.json()}), response.status_code
+
+########################################################################
+# API to convert .PDF, .docx files to image(.jpeg).
+
+# Configuration
+BACKBLAZE_BUCKET_ID = '3da90956953fa79b92240d1f'
+BACKBLAZE_BUCKET_NAME = 'storagevizsoft'
+BACKBLAZE_AUTH_URL = 'https://api.backblazeb2.com/b2api/v2/b2_authorize_account'
+KEY_ID = '004d9965f7b24df0000000005'
+APP_KEY = 'K004Tw4DUcnSIq4jiQ/ZXjZisfAv684'
+LOCAL_STORAGE = './local_files'
+
+# Helper: Convert PDF to Images
+def convert_pdf_to_images(file_path):
+    images = []
+    with fitz.open(file_path) as pdf_document:
+        for page_number in range(len(pdf_document)):
+            page = pdf_document[page_number]
+            pix = page.get_pixmap()
+            img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+            images.append(img)
+    return images
+
+# Helper: Convert DOCX to Images with Proper Formatting
+def convert_docx_to_images(file_path):
+    images = []
+    doc = Document(file_path)
+    font_path = "/path/to/your/font.ttf"  # Replace with a path to a .ttf font file
+    font = ImageFont.truetype(font_path, size=20) if os.path.exists(font_path) else ImageFont.load_default()
+
+    # Page dimensions
+    page_width = 800
+    page_height = 600
+    margin = 20
+    line_spacing = 30
+
+    current_height = margin
+    current_page = Image.new("RGB", (page_width, page_height), color="white")
+    draw = ImageDraw.Draw(current_page)
+
+    for paragraph in doc.paragraphs:
+        # Split text into lines that fit the width of the page
+        lines = text_wrap(paragraph.text, draw, font, page_width - 2 * margin)
+
+        for line in lines:
+            if current_height + line_spacing > page_height - margin:
+                # Save the current page and start a new one
+                images.append(current_page)
+                current_page = Image.new("RGB", (page_width, page_height), color="white")
+                draw = ImageDraw.Draw(current_page)
+                current_height = margin
+
+            # Draw the text line on the page
+            draw.text((margin, current_height), line, fill="black", font=font)
+            current_height += line_spacing
+
+    # Save the last page
+    images.append(current_page)
+    return images
+
+# Helper: Text Wrapping
+def text_wrap(text, draw, font, max_width):
+    words = text.split()
+    lines = []
+    current_line = ""
+
+    for word in words:
+        test_line = f"{current_line} {word}".strip()
+        width = draw.textbbox((0, 0), test_line, font=font)[2]  # Get the width using textbbox
+        if width <= max_width:
+            current_line = test_line
+        else:
+            lines.append(current_line)
+            current_line = word
+
+    if current_line:
+        lines.append(current_line)
+
+    return lines
+
+
+# Helper: Merge Images Vertically
+def merge_images_vertically(images):
+    total_height = sum(img.height for img in images)
+    max_width = max(img.width for img in images)
+
+    merged_image = Image.new("RGB", (max_width, total_height), color="white")
+    y_offset = 0
+    for img in images:
+        merged_image.paste(img, (0, y_offset))
+        y_offset += img.height
+
+    return merged_image
+
+# Helper: Authorize Backblaze
+def authorize_backblaze():
+    response = requests.get(BACKBLAZE_AUTH_URL, auth=(KEY_ID, APP_KEY))
+    if response.status_code == 200:
+        return response.json()
+    else:
+        raise Exception("Failed to authorize Backblaze")
+
+# Helper: Upload file to Backblaze
+def upload_to_backblaze(auth_data, file_path, file_name):
+    api_url = auth_data['apiUrl']
+    auth_token = auth_data['authorizationToken']
+    upload_url_resp = requests.post(
+        f"{api_url}/b2api/v2/b2_get_upload_url",
+        headers={'Authorization': auth_token},
+        json={'bucketId': BACKBLAZE_BUCKET_ID}
+    )
+    if upload_url_resp.status_code != 200:
+        raise Exception(f"Failed to get upload URL: {upload_url_resp.content.decode()}")
+
+    upload_url_data = upload_url_resp.json()
+    upload_url = upload_url_data['uploadUrl']
+    upload_auth_token = upload_url_data['authorizationToken']
+
+    with open(file_path, 'rb') as file_data:
+        headers = {
+            'Authorization': upload_auth_token,
+            'X-Bz-File-Name': file_name,
+            'Content-Type': 'b2/x-auto',
+            'X-Bz-Content-Sha1': 'do_not_verify'
+        }
+        upload_resp = requests.post(upload_url, headers=headers, data=file_data)
+        if upload_resp.status_code == 200:
+            return upload_resp.json()
+        else:
+            raise Exception(f"Failed to upload file: {upload_resp.content.decode()}")
+
+# Helper: Generate public link for Backblaze file
+def generate_backblaze_public_link(auth_data, file_name):
+    download_url = auth_data['downloadUrl']
+    return f"{download_url}/file/{BACKBLAZE_BUCKET_NAME}/{file_name}"
+
+@app.route('/convert_to_images', methods=['POST'])
+def convert_to_images():
+    uploaded_file = request.files.get('file')
+    if not uploaded_file:
+        return jsonify({"error": "File is required"}), 400
+
+    file_extension = os.path.splitext(uploaded_file.filename)[1].lower()
+    if file_extension not in ['.pdf', '.docx']:
+        return jsonify({"error": "Unsupported file type. Only PDF and DOCX are supported"}), 400
+
+    if not os.path.exists(LOCAL_STORAGE):
+        os.makedirs(LOCAL_STORAGE)
+    file_path = os.path.join(LOCAL_STORAGE, uploaded_file.filename)
+    uploaded_file.save(file_path)
+
+    merged_image_path = os.path.join(LOCAL_STORAGE, f"{os.path.splitext(uploaded_file.filename)[0]}.jpeg")
+
+    try:
+        if file_extension == '.pdf':
+            images = convert_pdf_to_images(file_path)
+        elif file_extension == '.docx':
+            images = convert_docx_to_images(file_path)
+
+        merged_image = merge_images_vertically(images)
+        merged_image.save(merged_image_path, format="JPEG")
+
+        auth_data = authorize_backblaze()
+        merged_image_name = os.path.basename(merged_image_path)
+        sanitized_filename = urllib.parse.quote(merged_image_name.replace(' ', '_'))
+        upload_response = upload_to_backblaze(auth_data, merged_image_path, sanitized_filename)
+        public_link = generate_backblaze_public_link(auth_data, sanitized_filename)
+
+        return jsonify({
+            "message": "File Conversion successful to Image",
+            "public_link": public_link
+        })
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        if os.path.exists(merged_image_path):
+            os.remove(merged_image_path)
+
+if __name__ == '__main__':
+    app.run()
