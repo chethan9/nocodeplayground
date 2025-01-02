@@ -1005,7 +1005,7 @@ def convert_pdf_to_images(file_path):
             images.append(img)
     return images
 
-# Helper: Convert DOCX to Images with Proper Formatting
+# Helper: Convert DOCX to Images
 def convert_docx_to_images(file_path):
     images = []
     doc = Document(file_path)
@@ -1050,7 +1050,7 @@ def text_wrap(text, draw, font, max_width):
 
     for word in words:
         test_line = f"{current_line} {word}".strip()
-        width = draw.textbbox((0, 0), test_line, font=font)[2]  # Get the width using textbbox
+        width = draw.textbbox((0, 0), test_line, font=font)[2]
         if width <= max_width:
             current_line = test_line
         else:
@@ -1061,7 +1061,6 @@ def text_wrap(text, draw, font, max_width):
         lines.append(current_line)
 
     return lines
-
 
 # Helper: Merge Images Vertically
 def merge_images_vertically(images):
@@ -1086,6 +1085,10 @@ def authorize_backblaze():
 
 # Helper: Upload file to Backblaze
 def upload_to_backblaze(auth_data, file_path, file_name):
+    # Sanitize the file name
+    sanitized_file_name = file_name.replace(" ", "_")  # Replace spaces with underscores
+
+    # Get upload URL
     api_url = auth_data['apiUrl']
     auth_token = auth_data['authorizationToken']
     upload_url_resp = requests.post(
@@ -1100,10 +1103,11 @@ def upload_to_backblaze(auth_data, file_path, file_name):
     upload_url = upload_url_data['uploadUrl']
     upload_auth_token = upload_url_data['authorizationToken']
 
+    # Upload file
     with open(file_path, 'rb') as file_data:
         headers = {
             'Authorization': upload_auth_token,
-            'X-Bz-File-Name': file_name,
+            'X-Bz-File-Name': sanitized_file_name,
             'Content-Type': 'b2/x-auto',
             'X-Bz-Content-Sha1': 'do_not_verify'
         }
@@ -1112,6 +1116,7 @@ def upload_to_backblaze(auth_data, file_path, file_name):
             return upload_resp.json()
         else:
             raise Exception(f"Failed to upload file: {upload_resp.content.decode()}")
+
 
 # Helper: Generate public link for Backblaze file
 def generate_backblaze_public_link(auth_data, file_name):
@@ -1130,38 +1135,57 @@ def convert_to_images():
 
     if not os.path.exists(LOCAL_STORAGE):
         os.makedirs(LOCAL_STORAGE)
-    file_path = os.path.join(LOCAL_STORAGE, uploaded_file.filename)
+    
+    # Save the original file with its sanitized name
+    sanitized_file_name = uploaded_file.filename.replace(" ", "_")  # Replace spaces with underscores
+    file_path = os.path.join(LOCAL_STORAGE, sanitized_file_name)
     uploaded_file.save(file_path)
 
-    merged_image_path = os.path.join(LOCAL_STORAGE, f"{os.path.splitext(uploaded_file.filename)[0]}.jpeg")
+    # Generate the merged file name using the sanitized original file name
+    merged_image_name = f"{os.path.splitext(sanitized_file_name)[0]}_merged.jpeg"
+    merged_image_path = os.path.join(LOCAL_STORAGE, merged_image_name)
 
     try:
+        # Convert the file to images
         if file_extension == '.pdf':
             images = convert_pdf_to_images(file_path)
         elif file_extension == '.docx':
             images = convert_docx_to_images(file_path)
 
+        # Merge the images into a single image
         merged_image = merge_images_vertically(images)
         merged_image.save(merged_image_path, format="JPEG")
 
+        # Authorize and upload files to Backblaze
         auth_data = authorize_backblaze()
-        merged_image_name = os.path.basename(merged_image_path)
-        sanitized_filename = urllib.parse.quote(merged_image_name.replace(' ', '_'))
-        upload_response = upload_to_backblaze(auth_data, merged_image_path, sanitized_filename)
-        public_link = generate_backblaze_public_link(auth_data, sanitized_filename)
+
+        # Upload the original file
+        original_file_link = generate_backblaze_public_link(
+            auth_data, sanitized_file_name
+        )
+        upload_to_backblaze(auth_data, file_path, sanitized_file_name)
+
+        # Upload the merged image
+        merged_image_link = generate_backblaze_public_link(
+            auth_data, merged_image_name
+        )
+        upload_to_backblaze(auth_data, merged_image_path, merged_image_name)
 
         return jsonify({
             "message": "File Conversion successful to Image",
-            "public_link": public_link
+            "original_file_link": original_file_link,
+            "public_link": merged_image_link
         })
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     finally:
+        # Clean up local files
         if os.path.exists(file_path):
             os.remove(file_path)
         if os.path.exists(merged_image_path):
             os.remove(merged_image_path)
+
 
 if __name__ == '__main__':
     app.run()
