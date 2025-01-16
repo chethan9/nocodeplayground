@@ -1190,14 +1190,12 @@ def convert_to_images():
 ########################################################################
 # API to fetch data from image using GPT-4.
 
-openaikey = "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"
-client = OpenAI(api_key=openaikey)
-
-def analyze_image(prompt, image_url):
+def analyze_image(api_key, prompt, image_url):
     """
     Calls the OpenAI GPT-4 Vision model to analyze an image and return the extracted data as JSON.
     """
     try:
+        client = OpenAI(api_key=api_key)
         # Call OpenAI API
         response = client.chat.completions.create(
             model="gpt-4o-mini",  # Replace with the correct model for vision
@@ -1240,11 +1238,12 @@ def analyze():
     if not data or 'prompt' not in data or 'image_url' not in data:
         return jsonify({"error": "Invalid input. 'prompt' and 'image_url' are required."}), 400
 
+    api_key = data['api_key']
     prompt = data['prompt']
     image_url = data['image_url']
 
     # Call the analyze_image function
-    result = analyze_image(prompt, image_url)
+    result = analyze_image(api_key, prompt, image_url)
 
     # Return the result as JSON
     return jsonify(result)
