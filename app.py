@@ -1190,7 +1190,8 @@ def convert_to_images():
 ########################################################################
 # API to fetch data from image using GPT-4.
 
-client = OpenAI(api_key="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")
+openaikey = "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"
+client = OpenAI(api_key=openaikey)
 
 def analyze_image(prompt, image_url):
     """
