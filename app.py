@@ -18,6 +18,7 @@ import mediapipe as mp
 import fitz  # PyMuPDF
 import urllib.parse 
 from docx import Document
+from openai import OpenAI
 
 app = Flask(__name__)
 ytmusic = YTMusic()
@@ -1185,6 +1186,68 @@ def convert_to_images():
             os.remove(file_path)
         if os.path.exists(merged_image_path):
             os.remove(merged_image_path)
+
+########################################################################
+# API to fetch data from image using GPT-4.
+
+openaikey = "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"
+client = OpenAI(api_key=openaikey)
+
+def analyze_image(prompt, image_url):
+    """
+    Calls the OpenAI GPT-4 Vision model to analyze an image and return the extracted data as JSON.
+    """
+    try:
+        # Call OpenAI API
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",  # Replace with the correct model for vision
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": prompt},
+                        {"type": "image_url", "image_url": {"url": image_url}},
+                    ],
+                }
+            ],
+        )
+
+        # Extract and return the response as JSON
+        output = response.choices[0].message.content
+
+        # Parse the JSON content from the response string
+        try:
+            parsed_output = json.loads(output.strip("```json\n").strip("```"))  # Remove surrounding markdown
+        except json.JSONDecodeError:
+            return {"error": "Failed to parse JSON from the response"}
+
+        # Return the parsed JSON output
+        return parsed_output
+
+    except Exception as e:
+        return {"error": str(e)}
+    
+# Flask route for analyzing image
+@app.route('/extract_data_from_image', methods=['POST'])
+def analyze():
+    """
+    Flask route to handle POST requests for analyzing an image with GPT-4 Vision.
+    Expects JSON payload with 'prompt' and 'image_url'.
+    """
+    data = request.get_json()
+
+    # Validate input
+    if not data or 'prompt' not in data or 'image_url' not in data:
+        return jsonify({"error": "Invalid input. 'prompt' and 'image_url' are required."}), 400
+
+    prompt = data['prompt']
+    image_url = data['image_url']
+
+    # Call the analyze_image function
+    result = analyze_image(prompt, image_url)
+
+    # Return the result as JSON
+    return jsonify(result)
 
 
 if __name__ == '__main__':
